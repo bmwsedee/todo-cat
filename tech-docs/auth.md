@@ -5,11 +5,11 @@ Better Auth 1.7 with email and password only, stored through the Drizzle adapter
 
 ## Central files
 
-- `lib/auth-options.ts` holds every option except the database: email and password, the bearer and device authorization plugins, and `CLI_CLIENT_ID`.
+- `lib/auth-options.ts` holds every option except the database: email and password, and the bearer and device authorization plugins.
 - `lib/auth.ts` builds the `auth` instance from those options plus the Drizzle adapter on `lib/db.ts`.
 - `lib/session.ts` exports `getUserId(headers)`, which returns the signed-in user's id from the session cookie or an `Authorization: Bearer <token>` header, or null.
 - `app/api/auth/[...all]/route.ts` mounts Better Auth's HTTP endpoints under `/api/auth`.
-- `lib/auth-client.ts` is the browser client the sign-up, log-in and log-out UI uses.
+- `lib/auth-client.ts` is the browser client the sign-up, log-in and log-out UI and the `/device` page use.
 - `lib/auth-schema.ts` holds the generated auth tables and `authRelations`; `lib/schema.ts` re-exports it and `lib/db.ts` passes the relations to Drizzle.
 
 ## One way to ask "who is this?"
@@ -23,8 +23,8 @@ Better Auth 1.7 with email and password only, stored through the Drizzle adapter
 - `bearer()` turns `Authorization: Bearer <session token>` into the session cookie before Better Auth reads it, so the REST API and the CLI authenticate with the same sessions as the browser.
 - Bearer tokens are the raw session token (from the `set-auth-token` response header or `/device/token`); a signed token works too.
 - `deviceAuthorization()` is the first-party flow: the CLI calls `/api/auth/device/code`, the user approves at `/device`, and `/api/auth/device/token` returns a session token that the CLI then sends as its bearer token.
-- `validateClient` accepts only `CLI_CLIENT_ID`; the CLI must send exactly that client id.
-- The `/device` approval page and the CLI client do not exist yet; the page must require a signed-in user and ask for explicit approval or denial (see the plugin docs).
+- `validateClient` accepts only `CLI_CLIENT_ID`, which the CLI imports from the contract.
+- The `/device` page and the CLI side of the flow are described in `tech-docs/cli.md`.
 - We do not use the OAuth Provider plugin's device flow; it issues OAuth access tokens for third-party clients, which we do not have.
 
 ## Schema and migrations

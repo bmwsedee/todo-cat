@@ -19,7 +19,8 @@ const messages: Record<string, string> = {
   INVALID_EMAIL: "That doesn't look like an email address.",
 };
 
-export function SignupForm() {
+/** Signs up, then goes to `next` (a same-site path, see lib/next-path.ts). */
+export function SignupForm({ next }: { next: string }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(
     async (_previous: State, formData: FormData): Promise<State> => {
@@ -41,7 +42,7 @@ export function SignupForm() {
         };
       }
       // Sign-up also signs in, so the session cookie is already set.
-      router.replace("/");
+      router.replace(next);
       return { name, email, error: null };
     },
     { error: null, name: "", email: "" },

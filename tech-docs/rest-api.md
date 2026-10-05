@@ -41,4 +41,4 @@ curl -s http://localhost:3000/api/todos -H "authorization: Bearer $TOKEN" \
   -H 'content-type: application/json' -d '{"title":"Buy tuna","dueDate":"2026-10-12"}'
 ```
 
-The demo user exists after `npm run db:seed`. The token is a session token, valid as long as the session; the CLI will get one through the device flow instead (see `tech-docs/auth.md`).
+The demo user exists after `npm run db:seed`. The token is a session token, valid as long as the session; the CLI gets one through the device flow instead (see `tech-docs/cli.md`).

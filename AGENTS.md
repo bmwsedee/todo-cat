@@ -11,7 +11,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # todo-cat
 
 A to-do list web app kept by Lissie, a cat with attitude who will be an AI agent (not built yet).
-It is a Next.js 16 App Router app (`app/`) with two npm workspaces, `contract/` (shared zod schemas) and `cli/` (the todo-cat CLI, still empty).
+It is a Next.js 16 App Router app (`app/`) with two npm workspaces, `contract/` (shared zod schemas) and `cli/` (the `todo-cat` CLI, a REST client).
 
 ## Commands
 
@@ -25,6 +25,7 @@ Run from the repo root.
 - `npm run qa` runs every check (Biome, typecheck, build, Vitest, Playwright); CI runs the same script.
 - `npm run auth:generate` regenerates the auth tables in `lib/auth-schema.ts` with Better Auth's CLI; follow it with `npm run db:generate`.
 - `npm run db:generate` writes a migration from `lib/schema.ts`, `npm run db:migrate` applies pending ones, `npm run db:reset` recreates the local database.
+- `npx todo-cat --help` runs the CLI (built on `npm install`; rebuild with `npm run build -w todo-cat-cli`), against `TODO_CAT_URL` (default http://localhost:3000).
 - `npm run db:seed` fills the local database with the demo user `demo@todo-cat.dev` (password `cat-person-2026`) and their todos; safe to rerun.
 
 ## Done means QA passes
@@ -61,6 +62,7 @@ Index:
 - [database.md](tech-docs/database.md) — Drizzle on SQLite via libsql, migrations, and the test databases.
 - [auth.md](tech-docs/auth.md) — Better Auth (email and password, bearer, device authorization), `getUserId`, and schema generation.
 - [rest-api.md](tech-docs/rest-api.md) — the `/api/todos` endpoints, their contract schemas and status codes, and a bearer token with curl.
+- [cli.md](tech-docs/cli.md) — the `todo-cat` CLI: agent-friendly output and exit codes, device-flow login, token storage, the `/device` page, the build and its end-to-end test.
 
 ## Keeping this map current
 

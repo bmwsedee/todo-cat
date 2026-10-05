@@ -56,3 +56,6 @@ next-env.d.ts
 
 # qa script log (scripts/qa.sh)
 /qa.log
+
+# todo-cat CLI bundle (npm run build -w todo-cat-cli, also run on npm install)
+/cli/dist/

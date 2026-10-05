@@ -62,3 +62,11 @@ export const errorBodySchema = z.object({
   error: z.object({ code: errorCodeSchema, message: z.string() }),
 });
 export type ErrorBody = z.infer<typeof errorBodySchema>;
+
+/** The client id the todo-cat CLI sends to start a device login; the server accepts no other. */
+export const CLI_CLIENT_ID = "todo-cat-cli";
+
+/** A device-login code as the CLI and the /device page show it, `ABCD-EFGH`; the server ignores the dash. */
+export function formatUserCode(code: string): string {
+  return code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code;
+}

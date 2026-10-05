@@ -45,6 +45,7 @@ section() {
 section biome npx biome check --error-on-warnings --colors=off
 section typecheck npm run typecheck
 section build npm run build
+section cli-build npm run build -w todo-cat-cli
 section vitest npx vitest run
 section playwright npx playwright test
 

@@ -1,11 +1,9 @@
+import { CLI_CLIENT_ID } from "@todo-cat/contract";
 import type { BetterAuthOptions } from "better-auth";
 import { bearer, deviceAuthorization } from "better-auth/plugins";
 
 // Everything but the database, so configs that must not open it (the schema generator,
 // the test instance) build from the same options as `lib/auth.ts`.
-
-// The client id the todo-cat CLI sends when it starts a device login; no other client is accepted.
-export const CLI_CLIENT_ID = "todo-cat-cli";
 
 export const adapterConfig = { provider: "sqlite" } as const;
 

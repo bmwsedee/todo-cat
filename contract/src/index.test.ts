@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 import {
   addTodoInputSchema,
   errorBodySchema,
+  formatUserCode,
   listTodosFilterSchema,
   updateTodoInputSchema,
 } from "./index";
@@ -52,4 +53,9 @@ test("parses the error body", () => {
     errorBodySchema.safeParse({ error: { code: "teapot", message: "" } })
       .success,
   ).toBe(false);
+});
+
+test("shows an eight-letter login code in two halves", () => {
+  expect(formatUserCode("ABCDEFGH")).toBe("ABCD-EFGH");
+  expect(formatUserCode("ABC")).toBe("ABC");
 });

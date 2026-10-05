@@ -9,6 +9,7 @@ The QA script runs them together with every other check, locally and in CI.
 - Playwright (`playwright.config.ts`) drives Chromium against a real `next dev`; use it for user flows and for `async` Server Components, which Vitest cannot render.
 - Vitest picks up `**/*.test.{ts,tsx}` anywhere in the repo, including the `contract` and `cli` workspaces, so colocate a test next to the file it covers.
 - Playwright specs live in `e2e/` and end in `.spec.ts`, which keeps the two runners from picking up each other's files.
+- `cli/src/todo-cat.test.ts` is the one Vitest file that starts a real server (`next dev` on a spare port); see `tech-docs/cli.md`.
 - `e2e/smoke.spec.ts` only checks that a signed-out visit to `/` lands on a login page with a heading, so it survives page redesigns.
 
 ## Commands
@@ -20,7 +21,7 @@ The QA script runs them together with every other check, locally and in CI.
 
 ## QA script
 
-- `npm run qa` (`scripts/qa.sh`) runs Biome, typecheck, production build, Vitest and Playwright in that order and exits non-zero if any fails.
+- `npm run qa` (`scripts/qa.sh`) runs Biome, typecheck, production build, the CLI build, Vitest and Playwright in that order and exits non-zero if any fails.
 - It is written for agents: one `PASS`/`FAIL` line per section, printed output only for failures, no colors, a summary at the end; full output of every section goes to `qa.log` (override with `QA_LOG`).
 - Every section runs even after a failure, so one run reports every problem.
 - It picks a free `E2E_PORT` unless one is set, so two checkouts or worktrees can run it at the same time.

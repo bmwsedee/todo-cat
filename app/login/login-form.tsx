@@ -9,7 +9,8 @@ import { authClient } from "@/lib/auth-client";
 
 type State = { error: string | null; email: string };
 
-export function LoginForm() {
+/** Logs in, then goes to `next` (a same-site path, see lib/next-path.ts). */
+export function LoginForm({ next }: { next: string }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(
     async (_previous: State, formData: FormData): Promise<State> => {
@@ -28,7 +29,7 @@ export function LoginForm() {
                 "Couldn't reach the server. Check your connection and try again."),
         };
       }
-      router.replace("/");
+      router.replace(next);
       return { email, error: null };
     },
     { error: null, email: "" },

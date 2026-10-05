@@ -48,7 +48,8 @@ around it. Hexagonal (ports and adapters), without the ceremony.
 
 - The `contract/` workspace (`@todo-cat/contract`, one file `contract/src/index.ts`)
   holds the zod schemas for todos, inputs, list filters, and the error body
-  `{ error: { code, message } }`.
+  `{ error: { code, message } }`, plus what login shares between server, CLI and
+  page (the CLI's client id, the login code format).
 - Server and clients import the same schemas. The CLI parses every response with
   them, so a server change that breaks the shape fails loudly in the client.
 - Validation lives in the schemas, at the adapter boundary. The service trusts its
