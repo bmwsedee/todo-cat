@@ -3,6 +3,7 @@
 `todo-cat` (workspace `cli/`, package `todo-cat-cli`) is a client of the REST API (see `tech-docs/rest-api.md`), never of the database.
 Its main users are AI agents working for a human, so its output, errors and exit codes are built to be parsed; humans get readable text from the same commands.
 `npx todo-cat --help` lists the commands, examples, environment variables and exit codes; every command has `--help` with examples too.
+The project skill `.claude/skills/todo-cat-cli/` teaches agents the workflows on top of it (login, find-then-act, jq questions, due versus creation dates, deleting only on request) and defers to `--help` for flags, so a CLI change that alters a workflow updates the skill too.
 
 ## Central files
 
