@@ -18,6 +18,9 @@ export const todoSchema = z.object({
 });
 export type Todo = z.infer<typeof todoSchema>;
 
+/** The body of `GET /api/todos`, in the service's list order. */
+export const todoListSchema = z.array(todoSchema);
+
 export const todoStatusSchema = z.enum(["open", "done", "all"]);
 export type TodoStatus = z.infer<typeof todoStatusSchema>;
 

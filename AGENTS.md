@@ -60,6 +60,7 @@ Index:
 - [testing.md](tech-docs/testing.md) — the Vitest and Playwright setup, the QA script, CI, and the e2e dev-server quirks.
 - [database.md](tech-docs/database.md) — Drizzle on SQLite via libsql, migrations, and the test databases.
 - [auth.md](tech-docs/auth.md) — Better Auth (email and password, bearer, device authorization), `getUserId`, and schema generation.
+- [rest-api.md](tech-docs/rest-api.md) — the `/api/todos` endpoints, their contract schemas and status codes, and a bearer token with curl.
 
 ## Keeping this map current
 
