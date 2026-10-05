@@ -27,7 +27,12 @@ export default defineConfig({
     // Starts every run on a freshly migrated database (see tech-docs/database.md).
     command: `npm run db:reset && next dev --port ${port}`,
     url: baseURL,
-    env: { NEXT_DIST_DIR: distDir, DATABASE_URL: databaseUrl },
+    // Better Auth rejects requests whose origin is not its base URL, so it must be this server.
+    env: {
+      NEXT_DIST_DIR: distDir,
+      DATABASE_URL: databaseUrl,
+      BETTER_AUTH_URL: baseURL,
+    },
     reuseExistingServer: false,
     timeout: 120_000,
   },

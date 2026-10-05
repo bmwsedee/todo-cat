@@ -1,26 +1,41 @@
 @import "tailwindcss";
 
+/* Cool fog and ink, with cat-eye amber kept for Lissie's eyes and keyboard focus. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --fog: #e4e9ee;
+  --paper: #f6f8fa;
+  --ink: #1b2230;
+  --ink-soft: #536071;
+  --line: #b9c3ce;
+  --amber: #f0b323;
+  --danger: #a8231b;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --fog: #151a23;
+    --paper: #1e2532;
+    --ink: #e6ebf0;
+    --ink-soft: #9aa6b5;
+    --line: #3a4557;
+    --danger: #f28b82;
   }
 }
 
+@theme inline {
+  --color-fog: var(--fog);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-amber: var(--amber);
+  --color-danger: var(--danger);
+  /* Pupils stay dark in both schemes; light pupils read as a different animal. */
+  --color-pupil: #1b2230;
+  --font-sans: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--fog);
+  color: var(--ink);
 }

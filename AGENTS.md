@@ -23,6 +23,7 @@ Run from the repo root.
 - `npm run format` applies Biome formatting.
 - `npm test` runs the Vitest unit and integration tests; `npm run test:e2e` runs the Playwright end-to-end tests.
 - `npm run qa` runs every check (Biome, typecheck, build, Vitest, Playwright); CI runs the same script.
+- `npm run auth:generate` regenerates the auth tables in `lib/auth-schema.ts` with Better Auth's CLI; follow it with `npm run db:generate`.
 - `npm run db:generate` writes a migration from `lib/schema.ts`, `npm run db:migrate` applies pending ones, `npm run db:reset` recreates the local database.
 
 ## Done means QA passes
@@ -32,12 +33,12 @@ Run from the repo root.
 
 ## Verify, don't recall
 
-- Next.js, React, Tailwind, Biome and Drizzle here are newer than your training data, so check APIs against current docs (see the next section) instead of memory.
+- Next.js, React, Tailwind, Biome, Drizzle and Better Auth here are newer than your training data, so check APIs against current docs (see the next section) instead of memory.
 
 ## Researching docs
 
 - Next.js: the guides in `node_modules/next/dist/docs/`, which match the installed version.
-- Vendors that publish an `llms.txt` index: start there and follow its links, e.g. Drizzle at https://orm.drizzle.team/llms.txt (use the `/docs/sqlite/…` pages, which cover the 1.0 release we use).
+- Vendors that publish an `llms.txt` index: start there and follow its links, e.g. Drizzle at https://orm.drizzle.team/llms.txt (use the `/docs/sqlite/…` pages, which cover the 1.0 release we use) and Better Auth at https://better-auth.com/llms.txt (fetch the `.md` URL of a page).
 - Libraries with an installed skill in `.claude/skills/` (Mastra, CopilotKit; `impeccable` and `frontend-design` for UI work): load the skill, which points to current docs and source.
 - Any other library: the ctx7 CLI from the `find-docs` skill (`npx ctx7@latest library <name> "<query>"`, then `docs <id> "<query>"`).
 - Type definitions in `node_modules/<pkg>` are the final word on an installed version's API.
@@ -56,6 +57,7 @@ Index:
 - [workspaces.md](tech-docs/workspaces.md) — the workspace layout and why it exists before its content does.
 - [testing.md](tech-docs/testing.md) — the Vitest and Playwright setup, the QA script, CI, and the e2e dev-server quirks.
 - [database.md](tech-docs/database.md) — Drizzle on SQLite via libsql, migrations, and the test databases.
+- [auth.md](tech-docs/auth.md) — Better Auth (email and password, bearer, device authorization), `getUserId`, and schema generation.
 
 ## Keeping this map current
 

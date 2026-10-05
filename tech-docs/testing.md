@@ -9,7 +9,7 @@ The QA script runs them together with every other check, locally and in CI.
 - Playwright (`playwright.config.ts`) drives Chromium against a real `next dev`; use it for user flows and for `async` Server Components, which Vitest cannot render.
 - Vitest picks up `**/*.test.{ts,tsx}` anywhere in the repo, including the `contract` and `cli` workspaces, so colocate a test next to the file it covers.
 - Playwright specs live in `e2e/` and end in `.spec.ts`, which keeps the two runners from picking up each other's files.
-- The smoke tests (`app/page.test.tsx`, `e2e/smoke.spec.ts`) only check that the page renders a heading, so they survive the starter page being replaced.
+- `e2e/smoke.spec.ts` only checks that a signed-out visit to `/` lands on a login page with a heading, so it survives page redesigns.
 
 ## Commands
 
@@ -40,7 +40,7 @@ The QA script runs them together with every other check, locally and in CI.
 - Next 16 allows one `next dev` per build directory (it holds a lock), so the e2e server sets `NEXT_DIST_DIR=.next-e2e`, which `next.config.ts` reads as `distDir`. That way it runs while `npm run dev` is up.
 - Next adds `.next-e2e/types` paths to `tsconfig.json` the first time it sees that `distDir`; those lines are meant to stay committed.
 - The e2e server's port (`E2E_PORT`, default 3100), build dir (`E2E_DIST_DIR`, default `.next-e2e`) and database (`E2E_DATABASE_URL`, default a temp-dir file named after the port) are overridable, so parallel runs never share state; the database is reset and migrated before each run (see `tech-docs/database.md`).
-- Keep a custom `E2E_DIST_DIR` starting with `.next-e2e`, which is gitignored; any other name gets added to `tsconfig.json` by Next.
+- Next adds every `distDir` it has not seen to `tsconfig.json` (and reformats the file), even names starting with `.next-e2e`; after running on a custom `E2E_DIST_DIR` or `NEXT_DIST_DIR`, revert `tsconfig.json` or Biome fails. Name the dir `.next-e2e…` so the build output stays gitignored.
 - `reuseExistingServer` is off, so a busy port fails loudly instead of testing whatever server is already listening there.
 - Vite 8 resolves tsconfig `paths` (`@/…`) natively through `resolve.tsconfigPaths`, so the Next guide's `vite-tsconfig-paths` plugin is not needed.
 - Vitest globals are off, so Testing Library cannot clean up on its own; `vitest.setup.ts` calls `cleanup` after each test.

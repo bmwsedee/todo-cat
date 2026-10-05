@@ -6,8 +6,9 @@ The file is named by `DATABASE_URL` in `.env` (`file:./data/app.db`); `data/` is
 ## Central files
 
 - `lib/db.ts` exports the Drizzle instance `db`; it is the only module that opens the database, and it imports `server-only` so a Client Component that imports it fails the build.
-- `lib/schema.ts` holds the tables; it is empty until todos arrive with the architecture and the auth tables with authentication.
-- `drizzle.config.ts` configures drizzle-kit; migrations go to `drizzle/`, which is committed and does not exist until the first table is generated.
+- `db` is created with the Drizzle 1.0 relations (`authRelations` for now), which `db.query` and the Better Auth adapter need.
+- `lib/schema.ts` is what drizzle-kit reads; it re-exports the generated auth tables from `lib/auth-schema.ts` (see `tech-docs/auth.md`) and will hold the app tables.
+- `drizzle.config.ts` configures drizzle-kit; migrations go to `drizzle/`, which is committed.
 - `scripts/delete-db.mts` deletes the database file (and its `-wal`/`-shm`/`-journal` files) named by `DATABASE_URL`, and refuses any URL that is not `file:`.
 
 ## Migrations
@@ -20,7 +21,7 @@ The file is named by `DATABASE_URL` in `.env` (`file:./data/app.db`); `data/` is
 ## Test databases
 
 - Each runner gets its own file, so tests never touch `data/app.db`.
-- Vitest (`lib/db.test.ts`) points `DATABASE_URL` at a temp file, imports `lib/db.ts`, migrates with `drizzle-orm/libsql/migrator` from `drizzle/`, and runs a query.
+- A Vitest file calls `stubTempDatabase()` from `test/temp-database.ts` before importing `lib/db.ts`, migrates with `drizzle-orm/libsql/migrator` from `drizzle/`, and passes `db.$client` to the returned cleanup in `afterAll`.
 - The Playwright web server runs `npm run db:reset` before `next dev`, with `DATABASE_URL` set to the e2e database (see `tech-docs/testing.md`), so every run starts empty.
 
 ## Gotchas
@@ -31,5 +32,5 @@ The file is named by `DATABASE_URL` in `.env` (`file:./data/app.db`); `data/` is
 - `@next/env` is CommonJS, so the `.mts` script must use its default import.
 - `DATABASE_URL` accepts `file:relative/path` (relative to the working directory) and `file:///absolute/path`; the parent directory must exist.
 - A Vitest file that opens the database needs `// @vitest-environment node` (the default is jsdom) and `vi.mock("server-only", () => ({}))`, because that package throws outside a React Server Components bundle.
-- libsql frees the file one event-loop turn after `close()` returns, and Windows cannot delete an open file, so clean up with the async `rm` and `maxRetries`; `rmSync` retries block the event loop and fail every attempt.
+- libsql releases the file only when its native handles are garbage-collected (seconds to a minute after `close()`), and Windows cannot delete an open file, so the cleanup forces a GC first; that is why `vitest.config.mts` passes `--expose-gc` to the workers.
 - Next keeps `@libsql/client` out of the server bundle by default (it is on the built-in `serverExternalPackages` list), so `next.config.ts` needs no entry for it.
