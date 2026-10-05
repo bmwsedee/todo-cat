@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "copilotkit": {
+      "source": "CopilotKit/CopilotKit",
+      "sourceType": "github",
+      "skillPath": "skills/copilotkit/SKILL.md",
+      "computedHash": "a14cb44adcf2a6f2fe3ce995fec52b29593d08de85d54fef79a84d311605e6b4"
+    },
+    "find-docs": {
+      "source": "upstash/context7",
+      "sourceType": "github",
+      "skillPath": "skills/find-docs/SKILL.md",
+      "computedHash": "08eb9ec903138793426445922381c37ae8daf3a4898ab640a904550710ab13d8"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "106acf230014cbb43ca34e6410371321b56ca742f9ee0442e8ec05bf02eb0384"
+    },
+    "mastra": {
+      "source": "mastra-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/mastra/SKILL.md",
+      "computedHash": "64268142282e94d1a3b9e3de5306ddb53effb5ea48a186d4969f9d29e59cd654"
+    },
+    "skill-creator": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/skill-creator/SKILL.md",
+      "computedHash": "7e3c9cd74e9e2b4828527a857170e86310f2dab5ea8030a9043df2c7e6c88857"
+    }
+  }
+}
