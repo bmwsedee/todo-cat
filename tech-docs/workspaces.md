@@ -5,14 +5,14 @@ The repo root is the Next.js web app and also the npm workspace root; `package.j
 ## Layout
 
 - Root (`app/`): the web app, where Lissie and the to-do list will live.
-- `contract/` (`@todo-cat/contract`): the zod schemas that define the data shapes shared by the web app and the CLI.
+- `contract/` (`@todo-cat/contract`): the zod schemas that define the data shapes shared by the web app and the CLI (see `tech-docs/architecture.md`).
 - `cli/` (`todo-cat-cli`): the todo-cat command-line client.
 
 ## Why it exists before its content does
 
 - The web app and the CLI must agree on the same data shapes, so those shapes live in one package that both import instead of being defined twice and drifting apart.
 - Fixing the package names and folders up front means the first schema or CLI command lands in a known place, and imports use the package name (`@todo-cat/contract`) from day one rather than relative paths that would later be rewritten.
-- The folders hold only a `package.json` because npm requires every listed workspace to exist; do not delete them while they are empty.
+- `cli/` holds only a `package.json` because npm requires every listed workspace to exist; do not delete it while it is empty.
 
 ## Gotchas
 

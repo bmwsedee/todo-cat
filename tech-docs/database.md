@@ -7,15 +7,17 @@ The file is named by `DATABASE_URL` in `.env` (`file:./data/app.db`); `data/` is
 
 - `lib/db.ts` exports the Drizzle instance `db`; it is the only module that opens the database, and it imports `server-only` so a Client Component that imports it fails the build.
 - `db` is created with the Drizzle 1.0 relations (`authRelations` for now), which `db.query` and the Better Auth adapter need.
-- `lib/schema.ts` is what drizzle-kit reads; it re-exports the generated auth tables from `lib/auth-schema.ts` (see `tech-docs/auth.md`) and will hold the app tables.
+- `lib/schema.ts` is what drizzle-kit reads; it re-exports the generated auth tables from `lib/auth-schema.ts` (see `tech-docs/auth.md`) and holds the app tables (`todos`).
 - `drizzle.config.ts` configures drizzle-kit; migrations go to `drizzle/`, which is committed.
 - `scripts/delete-db.mts` deletes the database file (and its `-wal`/`-shm`/`-journal` files) named by `DATABASE_URL`, and refuses any URL that is not `file:`.
 
 ## Migrations
 
 - The schema in code is the source of truth: change `lib/schema.ts`, run `npm run db:generate`, review the SQL, commit it with the change.
+- `db:generate` runs Biome over `drizzle/` afterwards, because drizzle-kit writes snapshots that fail `biome check`.
 - `npm run db:migrate` applies pending migrations and records them in the `__drizzle_migrations` table.
 - `npm run db:reset` runs `scripts/delete-db.mts` and then `db:migrate`, which leaves an empty, fully migrated database.
+- `npm run db:seed` migrates and then runs `scripts/seed.mts`, which (re)creates the demo user `demo@todo-cat.dev` (password `cat-person-2026`) with a dozen todos dated relative to today; rerunning it gives the same state.
 - Do not use `drizzle-kit push`; every schema change goes through a committed migration so tests and other checkouts reproduce it.
 
 ## Test databases
@@ -34,3 +36,4 @@ The file is named by `DATABASE_URL` in `.env` (`file:./data/app.db`); `data/` is
 - A Vitest file that opens the database needs `// @vitest-environment node` (the default is jsdom) and `vi.mock("server-only", () => ({}))`, because that package throws outside a React Server Components bundle.
 - libsql releases the file only when its native handles are garbage-collected (seconds to a minute after `close()`), and Windows cannot delete an open file, so the cleanup forces a GC first; that is why `vitest.config.mts` passes `--expose-gc` to the workers.
 - Next keeps `@libsql/client` out of the server bundle by default (it is on the built-in `serverExternalPackages` list), so `next.config.ts` needs no entry for it.
+- A script that imports `lib/db.ts` (like the seed) runs with `tsx --conditions=react-server`: tsx resolves the `@/…` paths and extensionless imports, and the condition makes `server-only` resolve to its empty build. It must load `.env` before it dynamically imports `lib/db.ts`, which reads `DATABASE_URL` on import.

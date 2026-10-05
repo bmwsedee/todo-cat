@@ -25,24 +25,38 @@ around it. Hexagonal (ports and adapters), without the ceremony.
 - The service returns contract types (plain objects, dates as ISO strings), never
   Drizzle rows.
 - Rule violations are a few typed errors with stable codes (`todo-not-found`,
-  `validation-failed`). Adapters map them; they don't invent their own.
+  `validation-failed`). Adapters map them; they don't invent their own. The service
+  throws `TodoError` with a contract `ErrorCode`; adapters turn a failed zod parse into
+  `validation-failed` themselves.
+- The list order is part of the service, so every adapter shows the same list: open
+  first, then by due date (none last), then oldest first.
+- `add` and `update` take an optional trailing `now`, so tests and the dev seed control
+  timestamps. Adapters never pass it, and agent tools must not expose it.
 
 ## Data
 
-- `todos`: id, owner (user id, cascade delete with the user), title, optional due date,
-  done, created at, completed at.
+- `todos` (in `lib/schema.ts`): id, owner (user id, cascade delete with the user), title,
+  optional due date, done, created at, completed at.
 - A due date is a date without time and stays an ISO `yyyy-mm-dd` string everywhere.
   A JavaScript `Date` is midnight UTC and shows the previous day west of Greenwich.
-- `completed at` is set when a todo is marked done and cleared when it's reopened.
+- `completed at` is set when a todo is marked done and cleared when it's reopened;
+  marking a done todo done again keeps it. A check constraint keeps `done` and
+  `completed at` in step.
+- Foreign keys are enforced: libsql turns `PRAGMA foreign_keys` on by default.
 
 ## The contract
 
-- The `contract/` workspace (`@todo-cat/contract`) holds the zod schemas for todos,
-  inputs, list filters, and the error body `{ error: { code, message } }`.
+- The `contract/` workspace (`@todo-cat/contract`, one file `contract/src/index.ts`)
+  holds the zod schemas for todos, inputs, list filters, and the error body
+  `{ error: { code, message } }`.
 - Server and clients import the same schemas. The CLI parses every response with
   them, so a server change that breaks the shape fails loudly in the client.
 - Validation lives in the schemas, at the adapter boundary. The service trusts its
   typed input but always enforces ownership.
+- Input schemas are strict objects, so a misspelled field fails instead of being
+  silently dropped.
+- The package exports its TypeScript source; Next transpiles workspace packages on its
+  own, and Vitest and tsx read TypeScript directly, so there is no build step.
 
 ## Adapters
 
@@ -66,5 +80,7 @@ around it. Hexagonal (ports and adapters), without the ceremony.
 ## Tests
 
 - The service is tested against a temp database with **two users for every use case**:
-  one user never sees, changes, or deletes the other's todos.
+  one user never sees, changes, or deletes the other's todos. `lib/todo-service.test.ts`
+  creates two fresh users per test, so tests need no cleanup between them.
+- The dev seed (`scripts/seed.mts`) also writes todos through the service.
 - Adapter tests cover only the mapping: 401 without a user, error codes, status codes.

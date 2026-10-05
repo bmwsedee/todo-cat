@@ -11,7 +11,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # todo-cat
 
 A to-do list web app kept by Lissie, a cat with attitude who will be an AI agent (not built yet).
-It is a Next.js 16 App Router app (`app/`) with two npm workspaces, `contract/` (shared zod schemas) and `cli/` (the todo-cat CLI), both still empty.
+It is a Next.js 16 App Router app (`app/`) with two npm workspaces, `contract/` (shared zod schemas) and `cli/` (the todo-cat CLI, still empty).
 
 ## Commands
 
@@ -25,6 +25,7 @@ Run from the repo root.
 - `npm run qa` runs every check (Biome, typecheck, build, Vitest, Playwright); CI runs the same script.
 - `npm run auth:generate` regenerates the auth tables in `lib/auth-schema.ts` with Better Auth's CLI; follow it with `npm run db:generate`.
 - `npm run db:generate` writes a migration from `lib/schema.ts`, `npm run db:migrate` applies pending ones, `npm run db:reset` recreates the local database.
+- `npm run db:seed` fills the local database with the demo user `demo@todo-cat.dev` (password `cat-person-2026`) and their todos; safe to rerun.
 
 ## Done means QA passes
 
