@@ -54,6 +54,7 @@ Run from the repo root.
 
 Index:
 
+- [architecture.md](tech-docs/architecture.md) — the todo service as the single owner-scoped core, the shared contract, and thin adapters around it.
 - [workspaces.md](tech-docs/workspaces.md) — the workspace layout and why it exists before its content does.
 - [testing.md](tech-docs/testing.md) — the Vitest and Playwright setup, the QA script, CI, and the e2e dev-server quirks.
 - [database.md](tech-docs/database.md) — Drizzle on SQLite via libsql, migrations, and the test databases.
