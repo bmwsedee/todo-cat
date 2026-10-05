@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # Dummy values generated per run; CI never sees a real secret.
+      - name: Write dummy .env
+        run: |
+          cat > .env <<EOF
+          DATABASE_URL=file:./data/app.db
+          OPENROUTER_API_KEY=sk-or-v1-dummy-$(openssl rand -hex 16)
+          BETTER_AUTH_SECRET=$(openssl rand -base64 32)
+          BETTER_AUTH_URL=http://localhost:3000
+          EOF
+
+      - name: Read Playwright version
+        id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - name: Install Playwright browser
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system deps
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - run: npm run qa
+
+      - name: Upload QA log and test results
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: qa-output
+          path: |
+            qa.log
+            test-results/
+          if-no-files-found: ignore

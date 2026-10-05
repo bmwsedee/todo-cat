@@ -19,9 +19,15 @@ Run from the repo root.
 
 - `npm run dev` starts the dev server on http://localhost:3000.
 - `npm run build` builds for production; `npm run start` serves that build.
-- `npm run lint` runs `biome check` (lint + format check); it must pass before committing.
+- `npm run lint` runs `biome check` (lint + format check, warnings fail).
 - `npm run format` applies Biome formatting.
 - `npm test` runs the Vitest unit and integration tests; `npm run test:e2e` runs the Playwright end-to-end tests.
+- `npm run qa` runs every check (Biome, typecheck, build, Vitest, Playwright); CI runs the same script.
+
+## Done means QA passes
+
+- Run `npm run qa` before you call a task done, and read `qa.log` only when the printed failure is not enough.
+- Fix the code instead of suppressing findings: no `biome-ignore`, `@ts-expect-error`, skipped tests or loosened config to turn a check green.
 
 ## Verify, don't recall
 
@@ -39,7 +45,7 @@ Run from the repo root.
 Index:
 
 - [workspaces.md](tech-docs/workspaces.md) — the workspace layout and why it exists before its content does.
-- [testing.md](tech-docs/testing.md) — the Vitest and Playwright setup, what each is for, and the e2e dev-server quirks.
+- [testing.md](tech-docs/testing.md) — the Vitest and Playwright setup, the QA script, CI, and the e2e dev-server quirks.
 
 ## Keeping this map current
 
