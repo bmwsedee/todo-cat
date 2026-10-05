@@ -24,7 +24,8 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: `next dev --port ${port}`,
+    // Starts every run on a freshly migrated database (see tech-docs/database.md).
+    command: `npm run db:reset && next dev --port ${port}`,
     url: baseURL,
     env: { NEXT_DIST_DIR: distDir, DATABASE_URL: databaseUrl },
     reuseExistingServer: false,
