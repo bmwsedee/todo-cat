@@ -46,3 +46,10 @@ next-env.d.ts
 
 # impeccable engine binary (platform-specific, downloaded on first use)
 .claude/skills/impeccable/scripts/bin/
+
+# playwright (the e2e dev server builds into its own dir, see tech-docs/testing.md)
+/.next-e2e/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

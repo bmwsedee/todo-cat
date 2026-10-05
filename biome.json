@@ -10,7 +10,9 @@
     "includes": [
       "**",
       "!node_modules",
+      "!.claude",
       "!.next",
+      "!.next-e2e",
       "!dist",
       "!build",
       "!public/**/*.svg"

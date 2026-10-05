@@ -21,6 +21,7 @@ Run from the repo root.
 - `npm run build` builds for production; `npm run start` serves that build.
 - `npm run lint` runs `biome check` (lint + format check); it must pass before committing.
 - `npm run format` applies Biome formatting.
+- `npm test` runs the Vitest unit and integration tests; `npm run test:e2e` runs the Playwright end-to-end tests.
 
 ## Verify, don't recall
 
@@ -38,6 +39,7 @@ Run from the repo root.
 Index:
 
 - [workspaces.md](tech-docs/workspaces.md) — the workspace layout and why it exists before its content does.
+- [testing.md](tech-docs/testing.md) — the Vitest and Playwright setup, what each is for, and the e2e dev-server quirks.
 
 ## Keeping this map current
 
