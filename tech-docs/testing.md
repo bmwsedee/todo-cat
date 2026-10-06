@@ -11,6 +11,8 @@ The QA script runs them together with every other check, locally and in CI.
 - Playwright specs live in `e2e/` and end in `.spec.ts`, which keeps the two runners from picking up each other's files.
 - `cli/src/todo-cat.test.ts` is the one Vitest file that starts a real server (`next dev` on a spare port); see `tech-docs/cli.md`.
 - `npm run test:e2e:model` runs `e2e-model/` with `playwright.model.config.ts` against the real model; it is the only test that calls one, so QA and CI leave it out.
+- `e2e/todo-list.spec.ts` covers the list on `/`: add with a due date, check off and reopen, delete after confirming, and changes made over REST.
+- Server Actions run in Vitest with `next/headers` and `next/cache` mocked (`app/todo-actions.test.ts`), since `headers()` and `refresh()` need a Next request.
 - `e2e/smoke.spec.ts` only checks that a signed-out visit to `/` lands on a login page with a heading, so it survives page redesigns.
 
 ## Commands

@@ -3,17 +3,17 @@ import { requireRealModel, say, signUp } from "./chat";
 
 test.beforeAll(requireRealModel);
 
-test("Lissie keeps the list: what she adds and completes shows up in the sidebar", async ({
+test("Lissie keeps the list: what she adds and completes shows up in the list", async ({
   page,
 }) => {
   await signUp(page, "Ada");
-  const sidebar = page.getByRole("complementary", { name: "Your list" });
-  const open = sidebar.getByRole("list", { name: "Open" });
-  const done = sidebar.getByRole("list", { name: "Done" });
+  const list = page.getByRole("region", { name: "Your list" });
+  const open = list.getByRole("list", { name: "To do" });
+  const done = list.getByRole("list", { name: "Done" });
 
   const added = await say(page, "Please add buy milk to my list.");
   console.log(`Lissie, adding: ${added}`);
-  // No reload: the sidebar refreshes when her tool returns.
+  // No reload: the list refreshes when her tool returns.
   await expect(open).toContainText(/buy milk/i);
   const addLine = page.getByText(/^Added “buy milk”/i);
   await expect(addLine).toBeVisible();

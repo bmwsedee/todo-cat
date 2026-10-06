@@ -64,6 +64,10 @@ around it. Hexagonal (ports and adapters), without the ceremony.
 - An adapter does four things: parse the input with a contract schema, resolve the
   user with `getUserId` (from `lib/session.ts`), call the service, map errors to its
   protocol. No business rules in adapters.
+- **Browser** (`app/todo-actions.ts`): Server Actions behind the list on `/`. Session
+  cookie, contract schemas on `unknown` input (anyone can POST to an action), a result of
+  `{ error: ErrorCode | null }` instead of a throw, and `refresh()` so the page shows the
+  service's list. The page itself reads with `listTodos`.
 - **REST** (`/api/todos`): for non-browser clients. Bearer token or session cookie,
   401 `unauthorized` without either, 404 `todo-not-found`, 400 `validation-failed`.
   Endpoints in `tech-docs/rest-api.md`.
@@ -88,4 +92,5 @@ around it. Hexagonal (ports and adapters), without the ceremony.
   one user never sees, changes, or deletes the other's todos. `lib/todo-service.test.ts`
   creates two fresh users per test, so tests need no cleanup between them.
 - The dev seed (`scripts/seed.mts`) also writes todos through the service.
-- Adapter tests cover only the mapping: 401 without a user, error codes, status codes.
+- Adapter tests cover only the mapping: 401 without a user, error codes, status codes
+  (`app/api/todos/route.test.ts`, `app/todo-actions.test.ts`).

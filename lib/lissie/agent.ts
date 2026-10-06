@@ -1,6 +1,7 @@
 import "server-only";
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
+import { today } from "@/lib/due-date";
 import { lissieModel } from "@/lib/lissie/model";
 import { lissieRequestContextSchema, lissieTools } from "@/lib/lissie/tools";
 
@@ -42,7 +43,7 @@ export const lissie = new Agent({
   id: "lissie",
   name: "Lissie",
   // The server's date in UTC; good enough for "tomorrow", wrong by a day around midnight far from Greenwich.
-  instructions: () => lissieInstructions(new Date().toISOString().slice(0, 10)),
+  instructions: () => lissieInstructions(today()),
   model: lissieModel,
   tools: lissieTools,
   // A run without the session user fails before the model is called.

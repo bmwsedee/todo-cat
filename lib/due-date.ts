@@ -10,3 +10,8 @@ const dueDateFormat = new Intl.DateTimeFormat("en-GB", {
 export function formatDueDate(dueDate: string) {
   return dueDateFormat.format(new Date(`${dueDate}T00:00:00Z`));
 }
+
+/** Today as a `yyyy-mm-dd` due date, in UTC; the date Lissie and the list both read due dates against. */
+export function today() {
+  return new Date().toISOString().slice(0, 10);
+}

@@ -31,38 +31,3 @@ test("a signed-in user gets the chat with Lissie on /", async ({ page }) => {
   ).toBeEnabled();
   await expect(page.getByRole("button", { name: "Log out" })).toBeVisible();
 });
-
-// Lissie is the browser's only way to change the list; REST stands in for her here.
-test("the sidebar shows the user's open and done todos", async ({ page }) => {
-  await page.goto("/signup");
-  await page.getByLabel("Name").fill("Ada");
-  await page.getByLabel("Email").fill(`e2e-${randomUUID()}@example.com`);
-  await page.getByLabel("Password").fill("correct horse battery");
-  await page.getByRole("button", { name: "Create account" }).click();
-
-  const sidebar = page.getByRole("complementary", { name: "Your list" });
-  await expect(sidebar).toContainText(
-    "Nothing yet. Tell Lissie what needs doing.",
-  );
-
-  // The page's request context carries the session cookie, which the REST API accepts.
-  const add = (title: string, dueDate?: string) =>
-    page.request.post("/api/todos", { data: { title, dueDate } });
-  const milk = await (await add("Buy milk", "2026-10-07")).json();
-  await add("Feed the cat");
-  expect(
-    (
-      await page.request.patch(`/api/todos/${milk.id}`, {
-        data: { done: true },
-      })
-    ).status(),
-  ).toBe(200);
-  await page.reload();
-
-  await expect(sidebar.getByRole("list", { name: "Open" })).toHaveText(
-    "Feed the cat",
-  );
-  await expect(sidebar.getByRole("list", { name: "Done" })).toHaveText(
-    "Buy milk",
-  );
-});
