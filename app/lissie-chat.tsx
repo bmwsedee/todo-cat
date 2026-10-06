@@ -65,7 +65,10 @@ export function LissieChat({ threadId }: { threadId: string }) {
   const [failed, setFailed] = useState(false);
   const { agent } = useAgent({
     agentId: AGENT_ID,
-    updates: [UseAgentUpdate.OnRunStatusChanged],
+    updates: [
+      UseAgentUpdate.OnRunStatusChanged,
+      UseAgentUpdate.OnMessagesChanged,
+    ],
   });
   // The next attempt clears the last failure.
   useEffect(() => {
@@ -75,7 +78,8 @@ export function LissieChat({ threadId }: { threadId: string }) {
   useToolCallLines();
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="relative flex h-full flex-col">
+      {agent.messages.length === 0 && !agent.isRunning && <EmptyChat />}
       <CopilotChat
         className="min-h-0 flex-1"
         threadId={threadId}
@@ -100,7 +104,23 @@ export function LissieChat({ threadId }: { threadId: string }) {
 }
 
 /**
- * Re-renders the page, and with it the sidebar, as soon as one of Lissie's tools that change
+ * What the chat says before anyone has said anything. It waits a moment before it shows,
+ * because a thread with history is also empty until connecting brings the messages in.
+ */
+function EmptyChat() {
+  return (
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-10 mx-auto max-w-3xl animate-arrive px-4 pt-6 lg:pt-8">
+      <p className="text-xl font-bold">Lissie is listening. Mostly.</p>
+      <p className="mt-1.5 max-w-md text-pretty text-ink-soft">
+        Tell her what needs doing, like “Add call the vet, due Friday”, or ask
+        her what's overdue.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Re-renders the page, and with it the list, as soon as one of Lissie's tools that change
  * the list returns. Live runs only: a replayed history changes nothing.
  */
 function useRefreshOnListChange(agent: AbstractAgent) {
@@ -205,7 +225,7 @@ function useToolCallLines() {
 
 function ToolCallLine({ children }: { children: ReactNode }) {
   return (
-    <p className="my-2 border-l-2 border-line pl-3 text-sm text-ink-soft">
+    <p className="my-2 border-l-2 border-ginger pl-3 text-sm text-ink-soft">
       {children}
     </p>
   );

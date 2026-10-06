@@ -1,11 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque } from "next/font/google";
+import { Bricolage_Grotesque, Grenze_Gotisch } from "next/font/google";
 import "./globals.css";
 
+// Everything people read and type: the list, forms and the chat.
 const bricolage = Bricolage_Grotesque({
   variable: "--font-bricolage",
   subsets: ["latin"],
   axes: ["opsz", "wdth"],
+});
+
+// Lissie's decrees: page headlines only (see tech-docs/ui.md).
+const grenze = Grenze_Gotisch({
+  variable: "--font-grenze",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
@@ -20,7 +27,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${bricolage.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      className={`${bricolage.variable} ${grenze.variable} h-full antialiased`}
+    >
       <body className="flex min-h-full flex-col font-sans">{children}</body>
     </html>
   );

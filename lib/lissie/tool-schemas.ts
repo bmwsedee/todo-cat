@@ -24,7 +24,7 @@ export const setTodoDoneToolInput = z.strictObject({
 // Another user's todo is not found, exactly like a missing one.
 export const setTodoDoneToolOutput = z.union([todoSchema, errorBodySchema]);
 
-/** The tools that change the list; the sidebar reloads when one of them returns. */
+/** The tools that change the list; the list on / reloads when one of them returns. */
 export const LIST_CHANGING_TOOLS: ReadonlySet<string> = new Set([
   "addTodo",
   "setTodoDone",

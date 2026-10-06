@@ -1,6 +1,10 @@
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 
+/** An inline link's look: ink text on an amber underline that turns ink on hover. */
+export const linkClass =
+  "font-semibold text-ink underline decoration-amber decoration-2 underline-offset-4 hover:decoration-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
+
 // Stacks fields, the error and the submit button with the same rhythm in every form.
 export function Form(props: ComponentProps<"form">) {
   return <form className="flex flex-col gap-5" {...props} />;
@@ -29,10 +33,7 @@ export function FormFooter({
   return (
     <p className="mt-8 text-ink-soft">
       {children}{" "}
-      <Link
-        href={href}
-        className="font-semibold text-ink underline decoration-amber decoration-2 underline-offset-4 hover:decoration-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber"
-      >
+      <Link href={href} className={linkClass}>
         {linkText}
       </Link>
     </p>

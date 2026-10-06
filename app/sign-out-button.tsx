@@ -12,6 +12,7 @@ export function SignOutButton() {
   return (
     <Button
       variant="secondary"
+      size="sm"
       disabled={pending}
       onClick={() =>
         startTransition(async () => {

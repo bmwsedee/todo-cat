@@ -1,7 +1,7 @@
 # Lissie, the agent
 
 Lissie is one Mastra agent, embedded in the Next app and served to a CopilotKit chat on `/` over AG-UI.
-Her tools (`listTodos`, `addTodo`, `setTodoDone`) are the agent adapter on the todo service, and she is the browser's only write path; the sidebar next to the chat is read-only.
+Her tools (`listTodos`, `addTodo`, `setTodoDone`) are the agent adapter on the todo service, and the list next to the chat (`tech-docs/ui.md`) refreshes whenever one of them changes something.
 
 ```
  / (CopilotChat, v2) ──AG-UI──▶ /api/copilotkit (CopilotKit runtime, multi-route)
@@ -21,7 +21,7 @@ Her tools (`listTodos`, `addTodo`, `setTodoDone`) are the agent adapter on the t
 - `lib/lissie/tools.ts` holds the tools and `lissieRequestContext`; `lib/lissie/tool-schemas.ts` their input and output schemas, shared with the chat that renders them.
 - `app/api/copilotkit/runtime.ts` builds the CopilotKit runtime and the authorization hooks; `[[...slug]]/route.ts` mounts it for GET and POST.
 - `lib/lissie/runner.ts` and `lib/lissie/history.ts` replay a thread from Mastra memory on connect.
-- `lib/lissie/thread.ts` derives the user's one thread id; `app/lissie-chat.tsx` is the provider, the chat, its tool-call lines and the eyes; `app/todo-sidebar.tsx` is the list beside it.
+- `lib/lissie/thread.ts` derives the user's one thread id; `app/lissie-chat.tsx` is the provider, the chat, its tool-call lines and the eyes; `app/todo-list.tsx` is the list beside it.
 
 ## Model
 
@@ -66,21 +66,18 @@ The runtime's routes are an authorization surface of their own, not just a trans
 ## UI
 
 - The provider is on `/` only, in a client component, as CopilotKit requires; it uses the v2 API (`@copilotkit/react-core/v2`) and the multi-route runtime (`useSingleEndpoint={false}`).
-- `app/globals.css` maps CopilotKit's shadcn tokens to ours and overrides what ignores them: message prose (Tailwind Typography), the copy button, the input and the send button.
-- CopilotKit's own dark mode keys off a `.dark` class, ours off `prefers-color-scheme`; an extension that adds `.dark` once gave a dark chat with light-scheme ink, so every chat rule starts with `:root body` to outrank `.dark [data-copilotkit]` and `cpk:dark:*`.
-- `color-scheme: light dark` (CSS and the viewport meta) tells forced-dark browsers that both schemes are designed.
-- Check contrast in four setups after a CopilotKit upgrade: light and dark preference, each with and without `.dark` on `<html>`.
+- How the chat is styled, and the CopilotKit gotchas behind it, are in `tech-docs/ui.md`.
 - The dev Inspector is off: the runtime rejects the routes it would call.
 - A failed run shows an alert under the input, cleared by the next run; her eyes half-close while she answers.
 - Each tool call renders as one line in words (`useRenderTool` per tool name), built from the call's arguments and its parsed result; the v2 provider has no static `renderToolCalls`.
-- The sidebar is a server component fed by `listTodos` in `app/page.tsx`; `router.refresh()` re-renders it when a `TOOL_CALL_RESULT` for `addTodo` or `setTodoDone` arrives, and the chat keeps its state.
+- The list is fed by `listTodos` in `app/page.tsx`; `router.refresh()` re-renders it when a `TOOL_CALL_RESULT` for `addTodo` or `setTodoDone` arrives, and the chat keeps its state.
 
 ## Tests
 
 - `lib/lissie/tools.test.ts` runs the tool executors on a temp database: two users, a made-up `userId` argument, and no request context.
 - `route.test.ts` checks that a run's tool call writes to the session user's list only and that the call comes back in the replay after a restart.
-- `e2e/chat.spec.ts` (in QA) checks the chat renders and connects for a new user without calling the model, and that the sidebar shows todos added over REST.
-- `npm run test:e2e:model` (`playwright.model.config.ts`, `e2e-model/`) talks to the real model: two turns, a reload that replays them, and a second user who sees none of it; `tools.spec.ts` asks her to add "buy milk" and finds it in the sidebar without a reload, then has her complete "feed the cat". It needs a real `OPENROUTER_API_KEY` and stays out of QA and CI.
+- `e2e/chat.spec.ts` (in QA) checks the chat renders and connects for a new user without calling the model.
+- `npm run test:e2e:model` (`playwright.model.config.ts`, `e2e-model/`) talks to the real model: two turns, a reload that replays them, and a second user who sees none of it; `tools.spec.ts` asks her to add "buy milk" and finds it in the list without a reload, then has her complete "feed the cat". It needs a real `OPENROUTER_API_KEY` and stays out of QA and CI.
 
 ## Gotchas
 

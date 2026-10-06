@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
-import { Form, FormError } from "@/components/ui/form";
+import { Form, FormError, linkClass } from "@/components/ui/form";
 import { authClient } from "@/lib/auth-client";
 
 type Decision = "approve" | "deny";
@@ -64,10 +64,7 @@ export function DeviceForm({ userCode }: { userCode: string }) {
             ? "Approved. Your terminal finishes logging in within a few seconds."
             : "Denied. That terminal gets nothing."}
         </p>
-        <Link
-          href="/"
-          className="self-start font-semibold underline decoration-amber decoration-2 underline-offset-4 hover:decoration-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber"
-        >
+        <Link href="/" className={`self-start ${linkClass}`}>
           Go to your list
         </Link>
       </div>
@@ -84,6 +81,9 @@ export function DeviceForm({ userCode }: { userCode: string }) {
         autoCapitalize="characters"
         spellCheck={false}
         required
+        // Read character by character against the terminal, so it gets room and even spacing.
+        size="lg"
+        className="tracking-[0.18em] uppercase tabular-nums"
       />
       <FormError>{state.error}</FormError>
       <div className="flex flex-wrap gap-3">

@@ -1,25 +1,33 @@
 @import "tailwindcss";
 
-/* Cool fog and ink, with cat-eye amber kept for Lissie's eyes and keyboard focus. */
+/*
+ * Tortitude (tech-docs/ui.md): Lissie is a tortoiseshell. Warm tortie ink on a cool wall-grey,
+ * amber for her eyes and keyboard focus, ginger only where her paw has been.
+ */
 :root {
   /* We style both schemes ourselves, so forced-dark browsers and extensions leave us alone. */
   color-scheme: light dark;
-  --fog: #e4e9ee;
-  --paper: #f6f8fa;
-  --ink: #1b2230;
-  --ink-soft: #536071;
-  --line: #b9c3ce;
+  --fog: #e3e8ee;
+  --paper: #f5f7fa;
+  --ink: #231a17;
+  --ink-soft: #5a5156;
+  --line: #b6bfca;
   --amber: #f0b323;
+  /* Amber darkened until a focus ring holds 3:1 against fog and ink; her eyes keep the bright one. */
+  --focus: #a86f00;
+  --ginger: #b25a10;
   --danger: #a8231b;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --fog: #151a23;
-    --paper: #1e2532;
-    --ink: #e6ebf0;
-    --ink-soft: #9aa6b5;
-    --line: #3a4557;
+    --fog: #141a22;
+    --paper: #1d2530;
+    --ink: #ede7e3;
+    --ink-soft: #a2abb7;
+    --line: #364252;
+    --focus: var(--amber);
+    --ginger: #f0913a;
     --danger: #f28b82;
   }
 }
@@ -31,10 +39,38 @@
   --color-ink-soft: var(--ink-soft);
   --color-line: var(--line);
   --color-amber: var(--amber);
+  --color-focus: var(--focus);
+  --color-ginger: var(--ginger);
   --color-danger: var(--danger);
   /* Pupils stay dark in both schemes; light pupils read as a different animal. */
-  --color-pupil: #1b2230;
+  --color-pupil: #231a17;
   --font-sans: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-grenze), "Iowan Old Style", Georgia, serif;
+}
+
+@theme {
+  /* The claw marks across a todo the user just checked off: one swipe, left to right. */
+  --animate-claw: claw-swipe 340ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  /* For what should appear only if it is still needed a moment later, such as the chat's empty state. */
+  --animate-arrive: arrive 240ms ease-out 500ms both;
+
+  @keyframes claw-swipe {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  @keyframes arrive {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
 }
 
 body {
@@ -67,8 +103,8 @@ body {
   --destructive: var(--danger);
   --border: var(--line);
   --input: var(--line);
-  --ring: var(--amber);
-  --radius: 0.5rem;
+  --ring: var(--focus);
+  --radius: 0.375rem;
   --cpk-default-font-family: var(--font-sans);
   color: var(--ink);
 }
@@ -93,6 +129,12 @@ body {
   --tw-prose-td-borders: var(--line);
 }
 
+/* What you said sits in a paper slip with a square corner where it leaves you. */
+:root body [data-copilotkit] .copilotKitUserMessage .cpk\:prose {
+  border: 2px solid var(--line);
+  border-radius: 1rem 1rem 0.25rem 1rem;
+}
+
 /* The copy button under a reply hard-codes greys for both of its schemes. */
 :root body [data-copilotkit] .copilotKitMessage button {
   color: var(--ink-soft);
@@ -106,6 +148,8 @@ body {
 :root body [data-copilotkit] .copilotKitInput {
   background: var(--paper);
   border: 2px solid var(--line);
+  border-radius: 0.75rem;
+  box-shadow: none;
 }
 
 :root body [data-copilotkit] .copilotKitInput:focus-within {
@@ -124,6 +168,7 @@ body {
 :root body [data-copilotkit] .copilotKitInput button {
   background: var(--ink);
   color: var(--fog);
+  border-radius: 0.5rem;
   opacity: 1;
 }
 
@@ -131,4 +176,9 @@ body {
   background: transparent;
   color: var(--ink-soft);
   box-shadow: inset 0 0 0 2px var(--line);
+}
+
+:root body [data-copilotkit] .copilotKitInput button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
