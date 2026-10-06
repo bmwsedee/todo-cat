@@ -18,11 +18,11 @@ const messages: Record<string, string> = {
   access_denied: "That code belongs to a login someone else started.",
 };
 
-function messageFor(error: { error?: string; message?: string }): string {
+// Better Auth's own message is written for developers, so it is never shown.
+function messageFor(error: { error?: string }): string {
   return (
     (error.error && messages[error.error]) ??
-    error.message ??
-    "Couldn't reach the server. Check your connection and try again."
+    "Couldn't check that code just now. Try again in a moment."
   );
 }
 

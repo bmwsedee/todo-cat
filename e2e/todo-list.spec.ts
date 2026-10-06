@@ -25,7 +25,7 @@ test("adds a todo with a due date, checks it off and opens it again", async ({
 }) => {
   await signUp(page);
   const { list, open, done } = lists(page);
-  await expect(list).toContainText("Nothing yet.");
+  await expect(list).toContainText("Nothing on your list yet.");
 
   // Far enough ahead that it is never overdue.
   const dueDate = "2099-01-02";
@@ -63,7 +63,8 @@ test("deletes a todo only once the user confirms", async ({ page }) => {
   for (const title of ["Feed the cat", "Clean the litter box"]) {
     await list.getByRole("textbox", { name: "New todo" }).fill(title);
     await list.getByRole("button", { name: "Add", exact: true }).click();
-    await expect(open).toContainText(title);
+    // It shows at once, but can be checked off only once it is saved.
+    await expect(list.getByRole("checkbox", { name: title })).toBeEnabled();
   }
 
   const bin = list.getByRole("button", { name: "Delete “Feed the cat”" });
@@ -75,6 +76,10 @@ test("deletes a todo only once the user confirms", async ({ page }) => {
   await bin.click();
   await list.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(open.getByRole("listitem")).toHaveText(["Clean the litter box"]);
+  // Focus moves to the todo that took its place, not back to the top of the page.
+  await expect(
+    list.getByRole("checkbox", { name: "Clean the litter box" }),
+  ).toBeFocused();
 
   await page.reload();
   await expect(lists(page).open.getByRole("listitem")).toHaveText([

@@ -12,6 +12,8 @@
   --ink: #231a17;
   --ink-soft: #5a5156;
   --line: #b6bfca;
+  /* The edge of anything you type into: dark enough to hold 3:1 against fog and paper. */
+  --edge: #78828f;
   --amber: #f0b323;
   /* Amber darkened until a focus ring holds 3:1 against fog and ink; her eyes keep the bright one. */
   --focus: #a86f00;
@@ -26,6 +28,7 @@
     --ink: #ede7e3;
     --ink-soft: #a2abb7;
     --line: #364252;
+    --edge: #66738a;
     --focus: var(--amber);
     --ginger: #f0913a;
     --danger: #f28b82;
@@ -38,6 +41,7 @@
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
   --color-line: var(--line);
+  --color-edge: var(--edge);
   --color-amber: var(--amber);
   --color-focus: var(--focus);
   --color-ginger: var(--ginger);
@@ -71,6 +75,18 @@
       opacity: 1;
     }
   }
+}
+
+/*
+ * A done todo's title sits on its claw marks. A tight fog halo cuts the scratches back
+ * where they cross a letter, so the title stays readable in both schemes.
+ */
+@utility text-halo {
+  text-shadow:
+    0 0 1px var(--fog),
+    0 0 2px var(--fog),
+    0 0 2px var(--fog),
+    0 0 3px var(--fog);
 }
 
 body {

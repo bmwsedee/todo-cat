@@ -20,13 +20,13 @@ export function LoginForm({ next }: { next: string }) {
         password: String(formData.get("password")),
       });
       if (error) {
+        // Better Auth's own message is written for developers, so it is never shown.
         return {
           email,
           error:
             error.code === "INVALID_EMAIL_OR_PASSWORD"
               ? "That email and password don't match. Check both and try again."
-              : (error.message ??
-                "Couldn't reach the server. Check your connection and try again."),
+              : "Couldn't log you in just now. Try again in a moment.",
         };
       }
       router.replace(next);

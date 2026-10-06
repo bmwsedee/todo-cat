@@ -1,4 +1,4 @@
-import type { ComponentProps } from "react";
+import { type ComponentProps, useId } from "react";
 
 /**
  * Every text-like input's look, so a bare `<input>` (like the add-todo row) matches the forms.
@@ -6,7 +6,7 @@ import type { ComponentProps } from "react";
  * override each other by class order.
  */
 export const inputClass =
-  "rounded-md border-2 border-line bg-paper text-ink placeholder:text-ink-soft focus:border-ink focus:outline-3 focus:outline-offset-2 focus:outline-focus";
+  "rounded-md border-2 border-edge bg-paper text-ink placeholder:text-ink-soft focus:border-ink focus:outline-3 focus:outline-offset-2 focus:outline-focus";
 
 export const inputSizes = {
   md: "px-3.5 py-2.5 text-base",
@@ -15,22 +15,32 @@ export const inputSizes = {
 };
 
 // A labelled text input; every form field uses it so inputs look the same everywhere.
+// `hint` says up front what the field needs, such as a password's minimum length.
 export function Field({
   label,
+  hint,
   size = "md",
   className = "",
   ...inputProps
 }: {
   label: string;
+  hint?: string;
   size?: keyof typeof inputSizes;
 } & Omit<ComponentProps<"input">, "size">) {
+  const hintId = useId();
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-sm font-semibold">{label}</span>
       <input
+        aria-describedby={hint ? hintId : undefined}
         className={`${inputClass} ${inputSizes[size]} ${className}`}
         {...inputProps}
       />
+      {hint && (
+        <span id={hintId} className="text-sm text-ink-soft">
+          {hint}
+        </span>
+      )}
     </label>
   );
 }

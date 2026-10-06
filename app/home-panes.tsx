@@ -1,13 +1,15 @@
 "use client";
 
 import { type ReactNode, useState } from "react";
-import { focusRing } from "@/components/ui/button";
+import { colorFade, focusRing } from "@/components/ui/button";
 
 type Pane = "list" | "chat";
 
 /**
  * The list and the chat side by side on a desktop; on a phone a switch shows one at a time.
  * Both stay mounted either way, so the chat keeps its conversation and the list its edits.
+ * The list is the main column. Its pane scrolls, so it reaches 0.5rem past the page's gutter
+ * and pads it back, which leaves room for the focus rings of the inputs and checkboxes.
  */
 export function HomePanes({
   list,
@@ -39,7 +41,7 @@ export function HomePanes({
       </fieldset>
       <main className="flex min-h-0 flex-1">
         <div
-          className={`${shown("list")} min-h-0 w-full flex-col overflow-y-auto py-5 lg:flex lg:w-[25rem] lg:shrink-0 lg:border-r-2 lg:border-line lg:py-8 lg:pr-10`}
+          className={`${shown("list")} -mx-2 min-h-0 flex-1 flex-col overflow-y-auto px-2 py-5 lg:mr-0 lg:flex lg:w-[min(34rem,45%)] lg:flex-none lg:border-r-2 lg:border-line lg:py-8 lg:pr-10`}
         >
           {list}
         </div>
@@ -67,7 +69,7 @@ function SwitchButton({
       type="button"
       aria-pressed={pressed}
       onClick={onClick}
-      className={`rounded-md py-1.5 font-bold transition-colors ${pressed ? "bg-ink text-fog" : "text-ink-soft hover:text-ink"} ${focusRing}`}
+      className={`min-h-11 rounded-md font-bold ${colorFade} ${pressed ? "bg-ink text-fog" : "text-ink-soft hover:text-ink"} ${focusRing}`}
     >
       {children}
     </button>

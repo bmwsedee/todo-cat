@@ -11,13 +11,20 @@ const variants = {
 
 const sizes = {
   md: "px-5 py-2.5 text-base",
-  // Inside a list row, where a full-size button would outweigh the todo.
-  sm: "px-3 py-1 text-sm",
+  // Inside a list row or the header, where a full-size button would outweigh its neighbors.
+  // On touch it still grows to a 44px target.
+  sm: "min-h-8 px-3 text-sm pointer-coarse:min-h-11",
 };
 
 /** Shared by every button-shaped control, so a styled `<button>` elsewhere looks the same. */
 export const focusRing =
   "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus";
+
+/**
+ * Hover fades for button-shaped controls. Not `transition-colors`, which also fades
+ * `outline-color` and so draws a fresh focus ring in the wrong color for its first 150ms.
+ */
+export const colorFade = "transition-[color,background-color,border-color]";
 
 export function Button({
   variant = "primary",
@@ -30,7 +37,7 @@ export function Button({
 } & ComponentProps<"button">) {
   return (
     <button
-      className={`rounded-md font-bold transition-colors disabled:cursor-wait disabled:opacity-60 ${focusRing} ${sizes[size]} ${variants[variant]} ${className}`}
+      className={`rounded-md font-bold ${colorFade} disabled:cursor-wait disabled:opacity-60 ${focusRing} ${sizes[size]} ${variants[variant]} ${className}`}
       {...props}
     />
   );

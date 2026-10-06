@@ -3,16 +3,18 @@
 import type { ErrorCode, Todo } from "@todo-cat/contract";
 import {
   type FormEvent,
+  type RefObject,
   startTransition,
   useEffect,
   useId,
+  useLayoutEffect,
   useOptimistic,
   useRef,
   useState,
   useTransition,
 } from "react";
 import { ClawMarks } from "@/components/claw-marks";
-import { Button, focusRing } from "@/components/ui/button";
+import { Button, colorFade, focusRing } from "@/components/ui/button";
 import { inputClass, inputSizes } from "@/components/ui/field";
 import { FormError } from "@/components/ui/form";
 import { formatDueDate } from "@/lib/due-date";
@@ -32,13 +34,37 @@ const messages: Record<ErrorCode, string> = {
 const unreachable =
   "Couldn't reach the server. Check your connection and try again.";
 
-type Change = { id: string } & ({ done: boolean } | { deleted: true });
+// How long a todo checked off here stays put while the claw marks rake across it (340ms),
+// plus a beat to see it done, before it moves to Done.
+const rakeHoldMs = 900;
 
-function applyChange(todos: Todo[], change: Change): Todo[] {
+/** A todo as the list shows it; `pending` while the server is still adding it. */
+type Shown = Todo & { pending?: true };
+
+type Change =
+  | { added: Shown }
+  | { id: string; done: boolean }
+  | { id: string; deleted: true };
+
+function applyChange(todos: Shown[], change: Change): Shown[] {
+  if ("added" in change) return insertAdded(todos, change.added);
   if ("deleted" in change) return todos.filter((todo) => todo.id !== change.id);
   return todos.map((todo) =>
     todo.id === change.id ? { ...todo, done: change.done } : todo,
   );
+}
+
+/** Puts a new todo where the server will: among the open ones by due date, undated last, newest last. */
+function insertAdded(todos: Shown[], added: Shown): Shown[] {
+  const at = todos.findIndex(
+    (todo) =>
+      todo.done ||
+      (added.dueDate !== null &&
+        (todo.dueDate === null || todo.dueDate > added.dueDate)),
+  );
+  return at === -1
+    ? [...todos, added]
+    : [...todos.slice(0, at), added, ...todos.slice(at)];
 }
 
 /** Runs a Server Action and turns its result, or a failed request, into a message or null. */
@@ -60,38 +86,73 @@ async function attempt(action: () => Promise<TodoActionResult>) {
  * `today` is the server's UTC date, the same one Lissie reads due dates against.
  */
 export function TodoList({ todos, today }: { todos: Todo[]; today: string }) {
-  const [shown, change] = useOptimistic(todos, applyChange);
+  const [shown, change] = useOptimistic<Shown[], Change>(todos, applyChange);
   const [error, setError] = useState<string | null>(null);
-  // Todos checked off on this page, which get to see their claw marks drawn.
-  const [swiped, setSwiped] = useState<ReadonlySet<string>>(new Set());
+  const [status, setStatus] = useState("");
+  // Todos just checked off on this page: they stay in the open list while their claw marks
+  // are drawn (see rakeHoldMs), then move to Done.
+  const [raking, setRaking] = useState<ReadonlySet<string>>(new Set());
+  const titleRef = useRef<HTMLInputElement>(null);
 
-  function run(next: Change, action: () => Promise<TodoActionResult>) {
-    if ("done" in next && next.done)
-      setSwiped((ids) => new Set(ids).add(next.id));
-    startTransition(async () => {
-      change(next);
-      setError(await attempt(action));
+  function rake(id: string, on: boolean) {
+    setRaking((ids) => {
+      const next = new Set(ids);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
     });
   }
 
-  const open = shown.filter((todo) => !todo.done);
-  const done = shown.filter((todo) => todo.done);
-  const rowProps = (todo: Todo) => ({
+  function run(
+    todo: Todo,
+    next: Change,
+    action: () => Promise<TodoActionResult>,
+  ) {
+    if ("done" in next) {
+      // With reduced motion there is nothing to watch, so it moves at once.
+      const holds =
+        next.done && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+      rake(todo.id, holds);
+      if (holds) setTimeout(() => rake(todo.id, false), rakeHoldMs);
+    }
+    startTransition(async () => {
+      change(next);
+      const failed = await attempt(action);
+      // Say which todo the optimistic change was taken back on, unless it is simply gone.
+      setError(
+        failed && failed !== messages["todo-not-found"]
+          ? `“${todo.title}” is back as it was. ${failed}`
+          : failed,
+      );
+    });
+  }
+
+  const open = shown.filter((todo) => !todo.done || raking.has(todo.id));
+  const done = shown.filter((todo) => todo.done && !raking.has(todo.id));
+  const openCount = shown.filter((todo) => !todo.done).length;
+  const focus = useFocusFollowsList(open, done, titleRef);
+
+  const rowProps = (todo: Shown) => ({
     todo,
     today,
-    swipe: swiped.has(todo.id),
+    swipe: raking.has(todo.id),
+    checkboxRef: focus.register(todo.id),
     onDoneChange: (isDone: boolean) =>
-      run({ id: todo.id, done: isDone }, () =>
+      run(todo, { id: todo.id, done: isDone }, () =>
         setTodoDoneAction({ id: todo.id, done: isDone }),
       ),
     onDelete: () =>
-      run({ id: todo.id, deleted: true }, () =>
+      run(todo, { id: todo.id, deleted: true }, () =>
         deleteTodoAction({ id: todo.id }),
       ),
   });
 
   return (
-    <section aria-labelledby="todo-list-heading" className="flex flex-col">
+    <section
+      ref={focus.sectionRef}
+      aria-labelledby="todo-list-heading"
+      className="flex flex-col"
+    >
       <div className="flex items-baseline justify-between gap-4">
         <h2
           id="todo-list-heading"
@@ -99,11 +160,24 @@ export function TodoList({ todos, today }: { todos: Todo[]; today: string }) {
         >
           Your list
         </h2>
-        {open.length > 0 && (
-          <p className="text-sm text-ink-soft">{open.length} to do</p>
+        {/* On a phone the List switch above already shows the count. */}
+        {openCount > 0 && (
+          <p className="hidden text-sm text-ink-soft lg:block">
+            {openCount} to do
+          </p>
         )}
       </div>
-      <AddTodoForm onResult={setError} />
+      <AddTodoForm
+        titleRef={titleRef}
+        onAdding={(todo) => change({ added: todo })}
+        onResult={(failed, title) => {
+          setError(failed);
+          setStatus(failed ? "" : `Added “${title}”.`);
+        }}
+      />
+      <p role="status" className="sr-only">
+        {status}
+      </p>
       {error && (
         <div className="mt-3">
           <FormError>{error}</FormError>
@@ -116,10 +190,10 @@ export function TodoList({ todos, today }: { todos: Todo[]; today: string }) {
           ))}
         </ul>
       ) : (
-        <p className="mt-5 text-ink-soft">
+        <p className="mt-5 text-pretty text-ink-soft">
           {done.length > 0
             ? "Nothing open. Lissie is almost impressed."
-            : "Nothing yet. Add a todo above, or tell Lissie."}
+            : "Nothing on your list yet. Lissie finds that suspicious. Add a todo above, or tell her."}
         </p>
       )}
       {done.length > 0 && (
@@ -136,13 +210,93 @@ export function TodoList({ todos, today }: { todos: Todo[]; today: string }) {
   );
 }
 
+/**
+ * Keeps keyboard focus in the list when the row holding it leaves its list: checked off,
+ * reopened or deleted. Focus goes to the row that takes its place (the next one, else the
+ * one before), else to the todo in its new list, else to the new-todo input.
+ */
+function useFocusFollowsList(
+  open: Shown[],
+  done: Shown[],
+  titleRef: RefObject<HTMLInputElement | null>,
+) {
+  const sectionRef = useRef<HTMLElement>(null);
+  const checkboxes = useRef(new Map<string, HTMLInputElement>());
+  const focusedId = useRef<string | null>(null);
+  const rendered = useRef({ open: [] as string[], done: [] as string[] });
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    const track = (event: FocusEvent) => {
+      const row = (event.target as Element).closest<HTMLElement>(
+        "[data-todo-id]",
+      );
+      focusedId.current = row?.dataset.todoId ?? null;
+    };
+    section?.addEventListener("focusin", track);
+    return () => section?.removeEventListener("focusin", track);
+  }, []);
+
+  useLayoutEffect(() => {
+    const was = rendered.current;
+    const now = {
+      open: open.map((todo) => todo.id),
+      done: done.map((todo) => todo.id),
+    };
+    rendered.current = now;
+    // A checkbox still on the page and usable; a todo being added has a disabled one.
+    const live = (todoId: string) => {
+      const input = checkboxes.current.get(todoId);
+      if (!input?.isConnected) checkboxes.current.delete(todoId);
+      else if (!input.disabled) return input;
+    };
+
+    const id = focusedId.current;
+    const active = document.activeElement;
+    if (!id || (active && active !== document.body)) return;
+    const from = was.open.includes(id)
+      ? "open"
+      : was.done.includes(id)
+        ? "done"
+        : null;
+    if (!from || now[from].includes(id)) return;
+
+    const at = was[from].indexOf(id);
+    const neighbors = [
+      ...was[from].slice(at + 1),
+      ...was[from].slice(0, at).reverse(),
+    ];
+    const target =
+      neighbors
+        .filter((other) => now[from].includes(other))
+        .map(live)
+        .find(Boolean) ??
+      live(id) ??
+      titleRef.current;
+    target?.focus();
+  });
+
+  return {
+    sectionRef,
+    // Kept by id, not cleared on unmount: a row that moves lists mounts a new checkbox.
+    register: (id: string) => (input: HTMLInputElement | null) => {
+      if (input) checkboxes.current.set(id, input);
+    },
+  };
+}
+
+let addCount = 0;
+
 function AddTodoForm({
+  titleRef,
+  onAdding,
   onResult,
 }: {
-  onResult: (error: string | null) => void;
+  titleRef: RefObject<HTMLInputElement | null>;
+  onAdding: (todo: Shown) => void;
+  onResult: (error: string | null, title: string) => void;
 }) {
   const [pending, startAdding] = useTransition();
-  const titleRef = useRef<HTMLInputElement>(null);
   const titleId = useId();
   const dueId = useId();
 
@@ -150,15 +304,32 @@ function AddTodoForm({
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
+    const title = String(data.get("title"));
+    const dueDate = String(data.get("dueDate")) || null;
+    // The form clears at once, ready for the next one, while this one shows in the list.
+    form.reset();
     startAdding(async () => {
-      const error = await attempt(() =>
-        addTodoAction({
-          title: String(data.get("title")),
-          dueDate: String(data.get("dueDate")) || null,
-        }),
-      );
-      onResult(error);
-      if (!error) form.reset();
+      onAdding({
+        id: `adding-${++addCount}`,
+        title,
+        dueDate,
+        done: false,
+        createdAt: new Date().toISOString(),
+        completedAt: null,
+        pending: true,
+      });
+      const error = await attempt(() => addTodoAction({ title, dueDate }));
+      // Nothing was added, so give the user back what they typed.
+      if (error) {
+        for (const [name, value] of [
+          ["title", title],
+          ["dueDate", dueDate ?? ""],
+        ]) {
+          const input = form.elements.namedItem(name);
+          if (input instanceof HTMLInputElement) input.value = value;
+        }
+      }
+      onResult(error, title);
       titleRef.current?.focus();
     });
   }
@@ -186,9 +357,9 @@ function AddTodoForm({
           id={dueId}
           name="dueDate"
           type="date"
-          className={`${inputClass} ${inputSizes.md} min-w-0 flex-1`}
+          className={`${inputClass} ${inputSizes.md} min-w-0 flex-1 sm:w-44 sm:flex-none`}
         />
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={pending} className="ml-auto">
           {pending ? "Adding…" : "Add"}
         </Button>
       </div>
@@ -200,12 +371,14 @@ function TodoRow({
   todo,
   today,
   swipe,
+  checkboxRef,
   onDoneChange,
   onDelete,
 }: {
-  todo: Todo;
+  todo: Shown;
   today: string;
   swipe: boolean;
+  checkboxRef: (input: HTMLInputElement | null) => void;
   onDoneChange: (done: boolean) => void;
   onDelete: () => void;
 }) {
@@ -222,15 +395,26 @@ function TodoRow({
   }, [confirming]);
 
   return (
-    <li className="group py-3">
+    <li
+      // A todo being added scrolls into view, so the user sees where it landed.
+      ref={
+        todo.pending
+          ? (row) => row?.scrollIntoView({ block: "nearest" })
+          : undefined
+      }
+      data-todo-id={todo.pending ? undefined : todo.id}
+      className={`group py-3 ${todo.pending ? "text-ink-soft" : ""}`}
+    >
       <div className="flex items-start gap-3">
         <span className="relative mt-[0.2rem] grid size-5 shrink-0 place-items-center">
           <input
+            ref={checkboxRef}
             id={checkboxId}
             type="checkbox"
             checked={todo.done}
+            disabled={todo.pending}
             onChange={(event) => onDoneChange(event.target.checked)}
-            className={`peer size-5 cursor-pointer appearance-none rounded-[5px] border-2 border-ink-soft bg-paper transition-colors checked:border-ginger checked:bg-ginger hover:border-ink checked:hover:border-ginger ${focusRing}`}
+            className={`peer size-5 cursor-pointer appearance-none rounded-[5px] border-2 border-ink-soft bg-paper ${colorFade} checked:border-ginger checked:bg-ginger hover:border-ink checked:hover:border-ginger disabled:cursor-wait disabled:border-edge ${focusRing}`}
           />
           <svg
             viewBox="0 0 12 12"
@@ -250,7 +434,7 @@ function TodoRow({
         <div className="min-w-0 flex-1">
           <label
             htmlFor={checkboxId}
-            className={`relative isolate inline-block max-w-full cursor-pointer break-words ${todo.done ? "text-ink-soft" : ""}`}
+            className={`relative isolate inline-block max-w-full cursor-pointer break-words ${todo.done ? "text-halo text-ink-soft" : ""}`}
           >
             {todo.title}
             {todo.done && <ClawMarks swipe={swipe} />}
@@ -259,13 +443,13 @@ function TodoRow({
             <DueDate dueDate={todo.dueDate} today={today} />
           )}
         </div>
-        {!confirming && (
+        {!confirming && !todo.pending && (
           <button
             ref={deleteRef}
             type="button"
             aria-label={`Delete “${todo.title}”`}
             onClick={() => setConfirming(true)}
-            className={`-my-1 grid size-8 shrink-0 place-items-center rounded-md text-ink-soft transition-opacity hover:bg-ink/10 hover:text-ink [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 ${focusRing}`}
+            className={`-my-1 grid size-8 shrink-0 place-items-center rounded-md text-ink-soft transition-opacity hover:bg-ink/10 hover:text-ink pointer-coarse:-my-2.5 pointer-coarse:-mr-1.5 pointer-coarse:size-11 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 ${focusRing}`}
           >
             <svg viewBox="0 0 16 16" aria-hidden="true" className="size-4">
               <path
