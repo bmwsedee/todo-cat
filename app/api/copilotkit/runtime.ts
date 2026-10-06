@@ -19,13 +19,22 @@ const runtime = new CopilotRuntime({
   // user id, and the user id in a fresh request context, which only the tools read.
   agents: async ({ request }) => {
     const userId = await requireUserId(request);
-    return MastraAgent.getLocalAgents({
-      mastra,
-      resourceId: userId,
-      requestContext: lissieRequestContext(userId),
-    });
+    return {
+      [LISSIE_AGENT_ID]: new MastraAgent({
+        agentId: LISSIE_AGENT_ID,
+        agent: mastra.getAgent(LISSIE_AGENT_ID),
+        resourceId: userId,
+        requestContext: lissieRequestContext(userId),
+        // The bridge adds a UI-generating `generate_a2ui` tool whenever a request's
+        // forwardedProps ask for one; only false here rules that out.
+        a2ui: { injectA2UITool: false },
+      }),
+    };
   },
   runner: new MastraHistoryRunner(loadLissieHistory),
+  // The A2UI middleware turns the operations a tool returns (showProgress) into a card in
+  // the chat. It injects no render tool: the model never writes UI.
+  a2ui: { agents: [LISSIE_AGENT_ID], injectA2UITool: false },
 });
 
 /**

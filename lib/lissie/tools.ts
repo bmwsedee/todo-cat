@@ -2,6 +2,7 @@ import "server-only";
 import { RequestContext } from "@mastra/core/request-context";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
+import { progressCard } from "@/lib/lissie/progress-card";
 import {
   addTodoToolInput,
   addTodoToolOutput,
@@ -9,6 +10,8 @@ import {
   listTodosToolOutput,
   setTodoDoneToolInput,
   setTodoDoneToolOutput,
+  showProgressToolInput,
+  showProgressToolOutput,
 } from "@/lib/lissie/tool-schemas";
 import { addTodo, listTodos, TodoError, updateTodo } from "@/lib/todo-service";
 
@@ -71,9 +74,29 @@ export const setTodoDoneTool = createTool({
   },
 });
 
+export const showProgressTool = createTool({
+  id: "showProgress",
+  description:
+    "Shows your human a card in the chat with how much of their list is done and how much is still open. Takes no input: the numbers come from the list.",
+  inputSchema: showProgressToolInput,
+  outputSchema: showProgressToolOutput,
+  requestContextSchema: lissieRequestContextSchema,
+  // Counted here, never by the model; the card is A2UI the chat renders without another model call.
+  execute: async (_input, { requestContext }) => {
+    const todos = await listTodos(requestContext.get("userId"));
+    const done = todos.filter((todo) => todo.done).length;
+    return progressCard({
+      total: todos.length,
+      done,
+      open: todos.length - done,
+    });
+  },
+});
+
 // The record keys are the tool names the model and the chat see.
 export const lissieTools = {
   listTodos: listTodosTool,
   addTodo: addTodoTool,
   setTodoDone: setTodoDoneTool,
+  showProgress: showProgressTool,
 };

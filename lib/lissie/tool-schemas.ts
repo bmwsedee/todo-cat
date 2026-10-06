@@ -24,6 +24,12 @@ export const setTodoDoneToolInput = z.strictObject({
 // Another user's todo is not found, exactly like a missing one.
 export const setTodoDoneToolOutput = z.union([todoSchema, errorBodySchema]);
 
+export const showProgressToolInput = z.strictObject({});
+// The A2UI container the middleware turns into a card (lib/lissie/progress-card.ts).
+export const showProgressToolOutput = z.object({
+  a2ui_operations: z.array(z.record(z.string(), z.unknown())),
+});
+
 /** The tools that change the list; the sidebar reloads when one of them returns. */
 export const LIST_CHANGING_TOOLS: ReadonlySet<string> = new Set([
   "addTodo",

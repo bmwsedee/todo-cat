@@ -1,7 +1,12 @@
 // @vitest-environment node
+import { A2uiMessageListSchema, MessageProcessor } from "@a2ui/web_core/v0_9";
+import { tryParseA2UIOperations } from "@ag-ui/a2ui-middleware";
 import { RequestContext } from "@mastra/core/request-context";
+import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/libsql/migrator";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+import { todoCatCatalog } from "@/components/a2ui-catalog";
+import { PROGRESS_SURFACE_ID } from "@/lib/lissie/progress-card";
 import { stubTempDatabase } from "@/test/temp-database";
 
 // `server-only` throws outside a React Server Components bundle, which Vitest is not.
@@ -9,10 +14,15 @@ vi.mock("server-only", () => ({}));
 
 const removeTempDatabase = stubTempDatabase();
 const { db } = await import("@/lib/db");
-const { user } = await import("@/lib/schema");
-const { addTodo, listTodos } = await import("@/lib/todo-service");
-const { addTodoTool, listTodosTool, lissieRequestContext, setTodoDoneTool } =
-  await import("@/lib/lissie/tools");
+const { todos, user } = await import("@/lib/schema");
+const { addTodo, listTodos, updateTodo } = await import("@/lib/todo-service");
+const {
+  addTodoTool,
+  listTodosTool,
+  lissieRequestContext,
+  setTodoDoneTool,
+  showProgressTool,
+} = await import("@/lib/lissie/tools");
 
 beforeAll(() => migrate(db, { migrationsFolder: "drizzle" }));
 afterAll(() => removeTempDatabase(db.$client));
@@ -30,7 +40,8 @@ async function twoUsers() {
 type LissieTool =
   | typeof addTodoTool
   | typeof listTodosTool
-  | typeof setTodoDoneTool;
+  | typeof setTodoDoneTool
+  | typeof showProgressTool;
 
 /**
  * Runs a tool's executor the way the agent does, with the run's request context. The input
@@ -159,6 +170,87 @@ describe("setTodoDone", () => {
   });
 });
 
+describe("showProgress", () => {
+  /** Adds `open` open and `done` done todos to the user's list. */
+  async function fill(userId: string, open: number, done: number) {
+    for (let i = 0; i < open + done; i++) {
+      const todo = await addTodo(userId, { title: `Chore ${i}` });
+      if (i >= open) await updateTodo(userId, todo.id, { done: true });
+    }
+  }
+
+  /** The A2UI operations in a result, as the A2UI middleware finds them in a tool result. */
+  function operationsIn(result: unknown) {
+    const parsed = tryParseA2UIOperations(JSON.stringify(result));
+    if (!parsed) throw new Error("no A2UI operations in the result");
+    return parsed.operations;
+  }
+
+  test("returns well-formed A2UI with the counts of the session user's rows", async () => {
+    const { me, other, asMe } = await twoUsers();
+    await fill(me, 2, 3);
+    await fill(other, 4, 0);
+
+    const operations = A2uiMessageListSchema.parse(
+      operationsIn(await run(showProgressTool, {}, asMe)),
+    );
+
+    // The chat's catalog takes the surface, and every component is one it has, with props
+    // its schema accepts.
+    const processor = new MessageProcessor([todoCatCatalog]);
+    processor.processMessages(operations);
+    const surface = processor.model.getSurface(PROGRESS_SURFACE_ID);
+    if (!surface) throw new Error("no surface was created");
+    const components = [...surface.componentsModel.entries].map(([, c]) => c);
+    expect(components.map((c) => c.id)).toContain("root");
+    for (const component of components) {
+      const api = todoCatCatalog.components.get(component.type);
+      expect(api, component.type).toBeDefined();
+      expect(() => api?.schema.parse(component.properties)).not.toThrow();
+    }
+
+    const rows = await db.select().from(todos).where(eq(todos.ownerId, me));
+    const done = rows.filter((row) => row.done).length;
+    expect(surface.dataModel.get("/")).toEqual({
+      total: rows.length,
+      done,
+      open: rows.length - done,
+    });
+    expect(surface.dataModel.get("/")).toEqual({ total: 5, done: 3, open: 2 });
+  });
+
+  test("binds the numbers through the data model, never into the tree", async () => {
+    const [a, b] = [await twoUsers(), await twoUsers()];
+    await fill(a.me, 1, 0);
+    await fill(b.me, 0, 7);
+
+    const components = async (asMe: RequestContext) =>
+      operationsIn(await run(showProgressTool, {}, asMe)).find(
+        (operation) => "updateComponents" in operation,
+      );
+    expect(await components(a.asMe)).toEqual(await components(b.asMe));
+  });
+
+  test("counts an empty list as nothing at all", async () => {
+    const { asMe } = await twoUsers();
+
+    const data = operationsIn(await run(showProgressTool, {}, asMe)).find(
+      (operation) => "updateDataModel" in operation,
+    );
+    expect(data).toMatchObject({
+      updateDataModel: { path: "/", value: { total: 0, done: 0, open: 0 } },
+    });
+  });
+
+  test("takes no input, so the model cannot supply numbers or a user", async () => {
+    const { other, asMe } = await twoUsers();
+
+    expect(
+      await run(showProgressTool, { done: 99, userId: other }, asMe),
+    ).toMatchObject(rejected);
+  });
+});
+
 describe("without the session user in the request context", () => {
   test.each([
     ["no request context", undefined],
@@ -174,6 +266,7 @@ describe("without the session user in the request context", () => {
     expect(
       await run(setTodoDoneTool, { id: theirs.id, done: true }, context),
     ).toMatchObject(rejected);
+    expect(await run(showProgressTool, {}, context)).toMatchObject(rejected);
     expect(await listTodos(other)).toEqual([theirs]);
   });
 });

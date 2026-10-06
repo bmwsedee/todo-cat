@@ -62,7 +62,7 @@ Index:
 - [database.md](tech-docs/database.md) — Drizzle on SQLite via libsql, migrations, and the test databases.
 - [auth.md](tech-docs/auth.md) — Better Auth (email and password, bearer, device authorization), `getUserId`, and schema generation.
 - [rest-api.md](tech-docs/rest-api.md) — the `/api/todos` endpoints, their contract schemas and status codes, and a bearer token with curl.
-- [agent.md](tech-docs/agent.md) — Lissie: the Mastra agent, her todo tools and how the user id reaches them, her memory per user, the CopilotKit runtime over AG-UI and its authorization, and the chat and sidebar on `/`.
+- [agent.md](tech-docs/agent.md) — Lissie: the Mastra agent, her todo tools and how the user id reaches them, her A2UI progress card, her memory per user, the CopilotKit runtime over AG-UI and its authorization, and the chat and sidebar on `/`.
 - [cli.md](tech-docs/cli.md) — the `todo-cat` CLI: agent-friendly output and exit codes, device-flow login, token storage, the `/device` page, the build and its end-to-end test, and the `todo-cat-cli` skill that teaches agents to use it.
 
 ## Keeping this map current

@@ -1,5 +1,15 @@
 import "server-only";
-import type { AssistantMessage, Message, ToolMessage } from "@ag-ui/core";
+import {
+  A2UI_OPERATIONS_KEY,
+  A2UIActivityType,
+  tryParseA2UIOperations,
+} from "@ag-ui/a2ui-middleware";
+import type {
+  ActivityMessage,
+  AssistantMessage,
+  Message,
+  ToolMessage,
+} from "@ag-ui/core";
 import type { MastraDBMessage } from "@mastra/core/agent";
 import { mastra } from "@/lib/lissie/mastra";
 
@@ -20,8 +30,8 @@ export async function loadLissieHistory(threadId: string): Promise<Message[]> {
 
 /**
  * The same messages the chat built live: user text, then for each assistant turn its text
- * and tool calls, each call followed by its result, and text after a call in a message of
- * its own. Stored ids are the ids the chat already used, so the Mastra bridge recognises
+ * and tool calls, each call followed by its result (and the card, for a result with A2UI),
+ * and text after a call in a message of its own. Stored ids are the ids the chat already used, so the Mastra bridge recognises
  * them as history on the next run; text after a tool call gets the id the bridge gave it.
  */
 export function toChatMessages(stored: MastraDBMessage[]): Message[] {
@@ -44,7 +54,7 @@ function textOf(message: MastraDBMessage) {
 function assistantTurn(message: MastraDBMessage): Message[] {
   const turn: Message[] = [];
   let current: AssistantMessage | undefined;
-  let results: ToolMessage[] = [];
+  let results: (ToolMessage | ActivityMessage)[] = [];
   let segments = 0;
 
   const flush = () => {
@@ -95,10 +105,29 @@ function assistantTurn(message: MastraDBMessage): Message[] {
             : (call.errorText ?? "The tool failed"),
         ...(call.state === "output-error" && { error: call.errorText }),
       });
+      if (call.state === "result")
+        results.push(...a2uiCard(call.toolCallId, call.result));
     }
   }
   flush();
   return turn;
+}
+
+/**
+ * The card a tool result with A2UI operations painted below it (showProgress), under the id
+ * and in the shape the A2UI middleware gave it live; none for any other result.
+ */
+function a2uiCard(toolCallId: string, result: unknown): ActivityMessage[] {
+  const parsed = tryParseA2UIOperations(JSON.stringify(result));
+  if (!parsed) return [];
+  return [
+    {
+      id: `a2ui-surface-${toolCallId}`,
+      role: "activity",
+      activityType: A2UIActivityType,
+      content: { [A2UI_OPERATIONS_KEY]: parsed.operations },
+    },
+  ];
 }
 
 // The id @ag-ui/mastra gives the `index`-th run of text after a tool call in a stored turn

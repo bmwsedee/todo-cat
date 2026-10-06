@@ -11,7 +11,7 @@ import { stubTempDatabase } from "@/test/temp-database";
 vi.mock("server-only", () => ({}));
 
 // Lissie answers without a network call: `Add "<title>"` makes her call addTodo and then
-// confirm; anything else gets the same line.
+// confirm, `How am I doing?` makes her call showProgress; anything else gets the same line.
 const model = vi.hoisted(() => ({ current: undefined as unknown }));
 vi.mock("@/lib/lissie/model", () => ({
   get lissieModel() {
@@ -43,14 +43,14 @@ function answer(text: string): StreamPart[] {
     { type: "finish", finishReason: { unified: "stop", raw: "stop" }, usage },
   ];
 }
-function callAddTodo(title: string): StreamPart[] {
+function callTool(toolName: string, input: unknown): StreamPart[] {
   return [
     { type: "stream-start", warnings: [] },
     {
       type: "tool-call",
       toolCallId: `call-${crypto.randomUUID()}`,
-      toolName: "addTodo",
-      input: JSON.stringify({ title }),
+      toolName,
+      input: JSON.stringify(input),
     },
     {
       type: "finish",
@@ -73,8 +73,10 @@ const mockModel = new MockLanguageModelV3({
       last?.role === "tool"
         ? answer("Added. Try not to forget it.")
         : add
-          ? callAddTodo(add[1])
-          : answer("Fine. I'm listening.");
+          ? callTool("addTodo", { title: add[1] })
+          : said === "How am I doing?"
+            ? callTool("showProgress", {})
+            : answer("Fine. I'm listening.");
     return { stream: simulateReadableStream({ chunks }) };
   },
 });
@@ -86,7 +88,7 @@ vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
 const { db } = await import("@/lib/db");
 const { GET, POST } = await import("./[[...slug]]/route");
 const { mastra } = await import("@/lib/lissie/mastra");
-const { listTodos } = await import("@/lib/todo-service");
+const { addTodo, listTodos, updateTodo } = await import("@/lib/todo-service");
 
 beforeAll(() => migrate(db, { migrationsFolder: "drizzle" }));
 afterAll(() => removeTempDatabase(db.$client));
@@ -109,7 +111,11 @@ function call(
   return method === "GET" ? GET(request) : POST(request);
 }
 
-function runInput(threadId: string, text = "Remind me to buy tuna.") {
+function runInput(
+  threadId: string,
+  text = "Remind me to buy tuna.",
+  forwardedProps: Record<string, unknown> = {},
+) {
   return {
     threadId,
     runId: crypto.randomUUID(),
@@ -117,7 +123,7 @@ function runInput(threadId: string, text = "Remind me to buy tuna.") {
     tools: [],
     context: [],
     state: {},
-    forwardedProps: {},
+    forwardedProps,
   };
 }
 
@@ -434,6 +440,92 @@ describe("Lissie's tools", () => {
         },
         { role: "assistant", content: "Added. Try not to forget it." },
       ],
+    });
+  });
+});
+
+describe("the progress card", () => {
+  // What the chat sends once it has an A2UI catalog.
+  const withCatalog = { a2uiCatalogAvailable: true };
+
+  /** A user with one open and one done todo, and the events of asking how they are doing. */
+  async function askForProgress(forwardedProps: Record<string, unknown>) {
+    const token = await signUp("Ada");
+    const userId = await userIdOf(token);
+    const threadId = lissieThreadId(userId);
+    await addTodo(userId, { title: "Feed the cat" });
+    const vet = await addTodo(userId, { title: "Book the vet" });
+    await updateTodo(userId, vet.id, { done: true });
+
+    const response = await call("POST", "/agent/lissie/run", {
+      token,
+      body: runInput(threadId, "How am I doing?", forwardedProps),
+    });
+    expect(response.status).toBe(200);
+    return { token, threadId, sent: await events(response) };
+  }
+
+  test("arrives as an A2UI surface with the caller's counts", async () => {
+    const { sent } = await askForProgress(withCatalog);
+
+    const toolCallId = sent.find(
+      (event) =>
+        event.type === "TOOL_CALL_START" &&
+        event.toolCallName === "showProgress",
+    )?.toolCallId;
+    expect(sent).toContainEqual(
+      expect.objectContaining({
+        type: "ACTIVITY_SNAPSHOT",
+        messageId: `a2ui-surface-${toolCallId}`,
+        activityType: "a2ui-surface",
+        content: {
+          a2ui_operations: expect.arrayContaining([
+            expect.objectContaining({
+              updateDataModel: expect.objectContaining({
+                value: { total: 2, done: 1, open: 1 },
+              }),
+            }),
+          ]),
+        },
+      }),
+    );
+  });
+
+  test("never comes with a tool that has the model write UI", async () => {
+    // Even a request that asks for one: forwardedProps are the browser's to set.
+    const calls = mockModel.doStreamCalls.length;
+    await askForProgress({ ...withCatalog, injectA2UITool: true });
+
+    const offered = mockModel.doStreamCalls
+      .slice(calls)
+      .map((options) => (options.tools ?? []).map((tool) => tool.name).sort());
+    expect(offered.length).toBeGreaterThan(0);
+    for (const tools of offered)
+      expect(tools).toEqual([
+        "addTodo",
+        "listTodos",
+        "setTodoDone",
+        "showProgress",
+      ]);
+  });
+
+  test("is replayed after a restart", async () => {
+    const { token, threadId, sent } = await askForProgress(withCatalog);
+    const card = sent.find((event) => event.type === "ACTIVITY_SNAPSHOT");
+
+    ɵGLOBAL_STORE.clear();
+    const response = await call("POST", "/agent/lissie/connect", {
+      token,
+      body: runInput(threadId),
+    });
+    const snapshot = (await events(response)).find(
+      (event) => event.type === "MESSAGES_SNAPSHOT",
+    );
+    expect(snapshot?.messages).toContainEqual({
+      id: card?.messageId,
+      role: "activity",
+      activityType: "a2ui-surface",
+      content: card?.content,
     });
   });
 });

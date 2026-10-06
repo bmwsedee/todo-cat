@@ -14,6 +14,7 @@ import type { TodoStatus } from "@todo-cat/contract";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
 import type { ZodType } from "zod";
+import { todoCatCatalog } from "@/components/a2ui-catalog";
 import { LissieEyes } from "@/components/lissie-eyes";
 import { FormError } from "@/components/ui/form";
 import { formatDueDate } from "@/lib/due-date";
@@ -33,6 +34,13 @@ const AGENT_ID = "lissie";
 const newMessageOnly: CopilotKitProviderProps["messageFilter"] = (messages) =>
   messages.slice(-1);
 
+// Lissie's cards are A2UI her tools return, rendered with our catalog. Nothing generates UI,
+// so the catalog's schema and generation guidelines stay out of her context.
+const a2ui: CopilotKitProviderProps["a2ui"] = {
+  catalog: todoCatCatalog,
+  includeSchema: false,
+};
+
 /** Connects everything below it to Lissie through the CopilotKit runtime at /api/copilotkit. */
 export function LissieProvider({ children }: { children: ReactNode }) {
   return (
@@ -41,6 +49,7 @@ export function LissieProvider({ children }: { children: ReactNode }) {
       useSingleEndpoint={false}
       agentId={AGENT_ID}
       messageFilter={newMessageOnly}
+      a2ui={a2ui}
       // The runtime only serves Lissie's own routes, so the dev Inspector has nothing to show.
       enableInspector={false}
     >
