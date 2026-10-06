@@ -1,5 +1,5 @@
 import "server-only";
-import type { Message } from "@ag-ui/core";
+import type { AssistantMessage, Message, ToolMessage } from "@ag-ui/core";
 import type { MastraDBMessage } from "@mastra/core/agent";
 import { mastra } from "@/lib/lissie/mastra";
 
@@ -19,17 +19,90 @@ export async function loadLissieHistory(threadId: string): Promise<Message[]> {
 }
 
 /**
- * Keeps the text of user and assistant messages under their stored ids, which are the ids
- * the chat already used, so the Mastra bridge recognises them as history on the next run.
- * Lissie has no tools yet; once she does, tool calls need converting here too.
+ * The same messages the chat built live: user text, then for each assistant turn its text
+ * and tool calls, each call followed by its result, and text after a call in a message of
+ * its own. Stored ids are the ids the chat already used, so the Mastra bridge recognises
+ * them as history on the next run; text after a tool call gets the id the bridge gave it.
  */
 export function toChatMessages(stored: MastraDBMessage[]): Message[] {
   return stored.flatMap((message): Message[] => {
-    if (message.role !== "user" && message.role !== "assistant") return [];
-    const content = message.content.parts
-      .flatMap((part) => (part.type === "text" ? [part.text] : []))
-      .join("");
-    if (!content) return [];
-    return [{ id: message.id, role: message.role, content }];
+    if (message.role === "user") {
+      const content = textOf(message);
+      return content ? [{ id: message.id, role: "user", content }] : [];
+    }
+    if (message.role === "assistant") return assistantTurn(message);
+    return [];
   });
+}
+
+function textOf(message: MastraDBMessage) {
+  return message.content.parts
+    .flatMap((part) => (part.type === "text" ? [part.text] : []))
+    .join("");
+}
+
+function assistantTurn(message: MastraDBMessage): Message[] {
+  const turn: Message[] = [];
+  let current: AssistantMessage | undefined;
+  let results: ToolMessage[] = [];
+  let segments = 0;
+
+  const flush = () => {
+    if (current && (current.content || current.toolCalls?.length))
+      turn.push(current, ...results);
+    current = undefined;
+    results = [];
+  };
+  const open = () => {
+    current = {
+      id: segments === 0 ? message.id : continuationId(message.id, segments),
+      role: "assistant",
+      content: "",
+    };
+    segments += 1;
+    return current;
+  };
+
+  for (const part of message.content.parts) {
+    if (part.type === "text") {
+      // Text after a tool call renders below it, so it starts a message of its own.
+      if (current?.toolCalls?.length) flush();
+      const segment = current ?? open();
+      segment.content += part.text;
+    } else if (part.type === "tool-invocation") {
+      const call = part.toolInvocation;
+      // A call that never got a result would show as running forever.
+      if (call.state !== "result" && call.state !== "output-error") continue;
+      const segment = current ?? open();
+      segment.toolCalls = [
+        ...(segment.toolCalls ?? []),
+        {
+          id: call.toolCallId,
+          type: "function",
+          function: {
+            name: call.toolName,
+            arguments: JSON.stringify(call.args ?? {}),
+          },
+        },
+      ];
+      results.push({
+        id: `${call.toolCallId}-result`,
+        role: "tool",
+        toolCallId: call.toolCallId,
+        content:
+          call.state === "result"
+            ? JSON.stringify(call.result)
+            : (call.errorText ?? "The tool failed"),
+        ...(call.state === "output-error" && { error: call.errorText }),
+      });
+    }
+  }
+  flush();
+  return turn;
+}
+
+// The id @ag-ui/mastra gives the `index`-th run of text after a tool call in a stored turn
+// (MastraAgent.continuationMessageId, private there), so a replay matches the live chat.
+function continuationId(baseId: string, index: number) {
+  return index <= 1 ? `${baseId}-agui-text` : `${baseId}-agui-text-${index}`;
 }

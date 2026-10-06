@@ -10,37 +10,73 @@ import { stubTempDatabase } from "@/test/temp-database";
 // `server-only` throws outside a React Server Components bundle, which Vitest is not.
 vi.mock("server-only", () => ({}));
 
-// Lissie answers every turn with the same line, without a network call.
+// Lissie answers without a network call: `Add "<title>"` makes her call addTodo and then
+// confirm; anything else gets the same line.
 const model = vi.hoisted(() => ({ current: undefined as unknown }));
 vi.mock("@/lib/lissie/model", () => ({
   get lissieModel() {
     return model.current;
   },
 }));
+// The provider's stream part type, which `ai` does not re-export.
+type StreamPart =
+  Awaited<
+    ReturnType<MockLanguageModelV3["doStream"]>
+  >["stream"] extends ReadableStream<infer Part>
+    ? Part
+    : never;
+const usage = {
+  inputTokens: {
+    total: 1,
+    noCache: 1,
+    cacheRead: undefined,
+    cacheWrite: undefined,
+  },
+  outputTokens: { total: 1, text: 1, reasoning: undefined },
+};
+function answer(text: string): StreamPart[] {
+  return [
+    { type: "stream-start", warnings: [] },
+    { type: "text-start", id: "t" },
+    { type: "text-delta", id: "t", delta: text },
+    { type: "text-end", id: "t" },
+    { type: "finish", finishReason: { unified: "stop", raw: "stop" }, usage },
+  ];
+}
+function callAddTodo(title: string): StreamPart[] {
+  return [
+    { type: "stream-start", warnings: [] },
+    {
+      type: "tool-call",
+      toolCallId: `call-${crypto.randomUUID()}`,
+      toolName: "addTodo",
+      input: JSON.stringify({ title }),
+    },
+    {
+      type: "finish",
+      finishReason: { unified: "tool-calls", raw: "tool_calls" },
+      usage,
+    },
+  ];
+}
 const mockModel = new MockLanguageModelV3({
-  doStream: async () => ({
-    stream: simulateReadableStream({
-      chunks: [
-        { type: "stream-start", warnings: [] },
-        { type: "text-start", id: "t" },
-        { type: "text-delta", id: "t", delta: "Fine. I'm listening." },
-        { type: "text-end", id: "t" },
-        {
-          type: "finish",
-          finishReason: { unified: "stop", raw: "stop" },
-          usage: {
-            inputTokens: {
-              total: 1,
-              noCache: 1,
-              cacheRead: undefined,
-              cacheWrite: undefined,
-            },
-            outputTokens: { total: 1, text: 1, reasoning: undefined },
-          },
-        },
-      ],
-    }),
-  }),
+  doStream: async ({ prompt }) => {
+    const last = prompt.at(-1);
+    const said =
+      last?.role === "user"
+        ? last.content
+            .flatMap((part) => (part.type === "text" ? [part.text] : []))
+            .join("")
+        : "";
+    const add = /^Add "(.+)"$/.exec(said);
+    const chunks =
+      last?.role === "tool"
+        ? answer("Added. Try not to forget it.")
+        : add
+          ? callAddTodo(add[1])
+          : answer("Fine. I'm listening.");
+    return { stream: simulateReadableStream({ chunks }) };
+  },
 });
 model.current = mockModel;
 
@@ -50,6 +86,7 @@ vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
 const { db } = await import("@/lib/db");
 const { GET, POST } = await import("./[[...slug]]/route");
 const { mastra } = await import("@/lib/lissie/mastra");
+const { listTodos } = await import("@/lib/todo-service");
 
 beforeAll(() => migrate(db, { migrationsFolder: "drizzle" }));
 afterAll(() => removeTempDatabase(db.$client));
@@ -90,7 +127,10 @@ async function events(response: Response) {
   return text
     .split("\n")
     .filter((line) => line.startsWith("data: "))
-    .map((line) => JSON.parse(line.slice(6)) as { type: string } & object);
+    .map(
+      (line) =>
+        JSON.parse(line.slice(6)) as { type: string } & Record<string, unknown>,
+    );
 }
 
 async function storedTexts(threadId: string) {
@@ -320,6 +360,81 @@ describe("the caller's own thread", () => {
     const own = lissieThreadId(await userIdOf(token));
     const response = await call("GET", `/threads/${own}/messages`, { token });
     expect(response.status).toBe(404);
+  });
+});
+
+describe("Lissie's tools", () => {
+  test("work on the list of the user the session belongs to", async () => {
+    const [mine, theirs] = await Promise.all([signUp("Me"), signUp("Other")]);
+    const [me, other] = await Promise.all([userIdOf(mine), userIdOf(theirs)]);
+
+    const response = await call("POST", "/agent/lissie/run", {
+      token: mine,
+      body: runInput(lissieThreadId(me), 'Add "buy milk"'),
+    });
+    expect(response.status).toBe(200);
+    const sent = await events(response);
+    expect(sent).toContainEqual(
+      expect.objectContaining({
+        type: "TOOL_CALL_START",
+        toolCallName: "addTodo",
+      }),
+    );
+    expect(sent).toContainEqual(
+      expect.objectContaining({
+        type: "TOOL_CALL_RESULT",
+        content: expect.stringContaining('"title":"buy milk"'),
+      }),
+    );
+
+    expect(await listTodos(me)).toMatchObject([{ title: "buy milk" }]);
+    expect(await listTodos(other)).toEqual([]);
+  });
+
+  test("calls survive a restart in the replayed history", async () => {
+    const token = await signUp("Ada");
+    const threadId = lissieThreadId(await userIdOf(token));
+    const run = await call("POST", "/agent/lissie/run", {
+      token,
+      body: runInput(threadId, 'Add "feed the cat"'),
+    });
+    const toolCallId = (await events(run)).find(
+      (event) => event.type === "TOOL_CALL_START",
+    )?.toolCallId;
+    expect(toolCallId).toEqual(expect.any(String));
+
+    ɵGLOBAL_STORE.clear();
+    const response = await call("POST", "/agent/lissie/connect", {
+      token,
+      body: runInput(threadId),
+    });
+    const snapshot = (await events(response)).find(
+      (event) => event.type === "MESSAGES_SNAPSHOT",
+    );
+    expect(snapshot).toMatchObject({
+      messages: [
+        { role: "user", content: 'Add "feed the cat"' },
+        {
+          role: "assistant",
+          toolCalls: [
+            {
+              id: toolCallId,
+              type: "function",
+              function: {
+                name: "addTodo",
+                arguments: JSON.stringify({ title: "feed the cat" }),
+              },
+            },
+          ],
+        },
+        {
+          role: "tool",
+          toolCallId,
+          content: expect.stringContaining('"title":"feed the cat"'),
+        },
+        { role: "assistant", content: "Added. Try not to forget it." },
+      ],
+    });
   });
 });
 

@@ -1,48 +1,7 @@
-import { randomUUID } from "node:crypto";
-import { loadEnvConfig } from "@next/env";
-import { expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { requireRealModel, say, signUp } from "./chat";
 
-test.beforeAll(() => {
-  loadEnvConfig(process.cwd());
-  const key = process.env.OPENROUTER_API_KEY ?? "";
-  if (key.length < 20) {
-    throw new Error(
-      "test:e2e:model talks to the real model; put a real OPENROUTER_API_KEY in .env",
-    );
-  }
-});
-
-async function signUp(page: Page, name: string) {
-  await page.goto("/signup");
-  await page.getByLabel("Name").fill(name);
-  await page.getByLabel("Email").fill(`e2e-${randomUUID()}@example.com`);
-  await page.getByLabel("Password").fill("correct horse battery");
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(
-    page.getByRole("heading", { name: `Hi, ${name}.` }),
-  ).toBeVisible();
-}
-
-async function say(page: Page, text: string) {
-  const replies = page.locator(".copilotKitAssistantMessage");
-  const before = await replies.count();
-  await page
-    .getByRole("textbox", { name: "Tell Lissie what needs doing" })
-    .fill(text);
-  const run = page.waitForResponse((response) =>
-    response.url().endsWith("/api/copilotkit/agent/lissie/run"),
-  );
-  await page.getByRole("button", { name: "Send to Lissie" }).click();
-  // The run streams its events in one response; it is done when that response is.
-  await (await run).finished();
-  await expect(replies).toHaveCount(before + 1);
-  await expect(
-    page.getByRole("alert").filter({ hasText: "Lissie" }),
-  ).toHaveCount(0);
-  const reply = (await replies.last().innerText()).trim();
-  expect(reply).not.toBe("");
-  return reply;
-}
+test.beforeAll(requireRealModel);
 
 test("Lissie answers, remembers the conversation, and keeps it to its owner", async ({
   page,
@@ -55,7 +14,10 @@ test("Lissie answers, remembers the conversation, and keeps it to its owner", as
   const offTopic = await say(page, "Write me a haiku about the ocean.");
   console.log(`Lissie, on topic: ${onTopic}\nLissie, off topic: ${offTopic}`);
 
-  // A reload replays the thread from Mastra memory.
+  // A reload replays the thread from Mastra memory. A reminder makes her add a todo, so a
+  // turn can be more than one message; the replay must bring back as many as there were.
+  const replies = page.locator(".copilotKitAssistantMessage");
+  const repliesBefore = await replies.count();
   await page.reload();
   await expect(
     page.getByText("Remind me to buy cat food tomorrow."),
@@ -63,7 +25,7 @@ test("Lissie answers, remembers the conversation, and keeps it to its owner", as
   await expect(
     page.getByText("Write me a haiku about the ocean."),
   ).toBeVisible();
-  await expect(page.locator(".copilotKitAssistantMessage")).toHaveCount(2);
+  await expect(replies).toHaveCount(repliesBefore);
 
   // The browser sends only the new message, so she can only know this from Mastra memory.
   const recalled = await say(page, "What did I ask you to remind me about?");
