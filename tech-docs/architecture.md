@@ -68,6 +68,7 @@ around it. Hexagonal (ports and adapters), without the ceremony.
   401 `unauthorized` without either, 404 `todo-not-found`, 400 `validation-failed`.
   Endpoints in `tech-docs/rest-api.md`.
 - **CLI** (`cli/`): a client of the REST API, never of the database.
+- **Chat** (`/api/copilotkit`): the CopilotKit runtime serving Lissie over AG-UI, with Mastra memory scoped to the session user; see `tech-docs/agent.md`.
 - **Agent tools** (later): call the service directly. The user id comes from the
   server session, never from a tool argument the model fills in.
 - **MCP**: over stdio inside the CLI (a REST client again), over HTTP inside the app

@@ -39,3 +39,61 @@ body {
   background: var(--fog);
   color: var(--ink);
 }
+
+/* CopilotKit's chat reads shadcn tokens; point them at ours so it follows both schemes.
+   `body` outranks its own `[data-copilotkit]` rule, which loads after this file. */
+body [data-copilotkit] {
+  --background: var(--fog);
+  --foreground: var(--ink);
+  --card: var(--paper);
+  --card-foreground: var(--ink);
+  --popover: var(--paper);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--fog);
+  --secondary: var(--paper);
+  --secondary-foreground: var(--ink);
+  --muted: var(--paper);
+  --muted-foreground: var(--ink-soft);
+  --accent: var(--paper);
+  --accent-foreground: var(--ink);
+  --destructive: var(--danger);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--amber);
+  --radius: 0.5rem;
+  --cpk-default-font-family: var(--font-sans);
+}
+
+/* Its dark styles key off a `.dark` class we never set, so these ignore the tokens:
+   message text (Tailwind Typography) and the input box. */
+body [data-copilotkit] .copilotKitMessage .cpk\:prose {
+  --tw-prose-body: var(--ink);
+  --tw-prose-headings: var(--ink);
+  --tw-prose-bold: var(--ink);
+  --tw-prose-links: var(--ink);
+  --tw-prose-code: var(--ink);
+  --tw-prose-quotes: var(--ink);
+  --tw-prose-bullets: var(--ink-soft);
+  --tw-prose-counters: var(--ink-soft);
+  --tw-prose-hr: var(--line);
+  --tw-prose-quote-borders: var(--line);
+}
+
+body [data-copilotkit] .copilotKitInput {
+  background: var(--paper);
+  border: 2px solid var(--line);
+}
+
+body [data-copilotkit] .copilotKitInput:focus-within {
+  border-color: var(--ink);
+}
+
+body [data-copilotkit] .copilotKitInput button:enabled {
+  background: var(--ink);
+  color: var(--fog);
+}
+
+body [data-copilotkit] .copilotKitInput textarea::placeholder {
+  color: var(--ink-soft);
+}

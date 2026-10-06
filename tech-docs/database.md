@@ -7,6 +7,7 @@ The file is named by `DATABASE_URL` in `.env` (`file:./data/app.db`); `data/` is
 
 - `lib/db.ts` exports the Drizzle instance `db`; it is the only module that opens the database, and it imports `server-only` so a Client Component that imports it fails the build.
 - `db` is created with the Drizzle 1.0 relations (`authRelations` for now), which `db.query` and the Better Auth adapter need.
+- Mastra keeps Lissie's memory in the same file on the same client, in `mastra_*` tables it creates itself; they are not in `lib/schema.ts` or the migrations (see `tech-docs/agent.md`).
 - `lib/schema.ts` is what drizzle-kit reads; it re-exports the generated auth tables from `lib/auth-schema.ts` (see `tech-docs/auth.md`) and holds the app tables (`todos`).
 - `drizzle.config.ts` configures drizzle-kit; migrations go to `drizzle/`, which is committed.
 - `scripts/delete-db.mts` deletes the database file (and its `-wal`/`-shm`/`-journal` files) named by `DATABASE_URL`, and refuses any URL that is not `file:`.

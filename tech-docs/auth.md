@@ -14,7 +14,7 @@ Better Auth 1.7 with email and password only, stored through the Drizzle adapter
 
 ## One way to ask "who is this?"
 
-- Every adapter (pages, the REST API, agent tools, MCP) calls `getUserId` and nothing else reads sessions, so cookie and bearer handling, and any future change to them, live in one place.
+- Every adapter (pages, the REST API, the chat runtime, agent tools, MCP) calls `getUserId` and nothing else reads sessions, so cookie and bearer handling, and any future change to them, live in one place.
 - Code that needs more than the id (the home page shows the name) loads it from the `user` table by id.
 - Pages check the session server-side and `redirect()`; there is no Proxy, because it would only be an optimistic cookie check on top of that.
 

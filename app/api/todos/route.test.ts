@@ -6,6 +6,7 @@ import {
 } from "@todo-cat/contract";
 import { migrate } from "drizzle-orm/libsql/migrator";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+import { signUp } from "@/test/sign-up";
 import { stubTempDatabase } from "@/test/temp-database";
 
 // `server-only` throws outside a React Server Components bundle, which Vitest is not.
@@ -15,7 +16,6 @@ const removeTempDatabase = stubTempDatabase();
 vi.stubEnv("BETTER_AUTH_SECRET", "vitest-secret-that-is-at-least-32-chars");
 vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
 const { db } = await import("@/lib/db");
-const authRoute = await import("@/app/api/auth/[...all]/route");
 const todosRoute = await import("./route");
 const todoRoute = await import("./[id]/route");
 
@@ -23,25 +23,6 @@ beforeAll(() => migrate(db, { migrationsFolder: "drizzle" }));
 afterAll(() => removeTempDatabase(db.$client));
 
 const base = "http://localhost:3000";
-
-/** Signs up through the real auth endpoint and returns the session token it hands out. */
-async function signUp(name: string) {
-  const response = await authRoute.POST(
-    new Request(`${base}/api/auth/sign-up/email`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name,
-        email: `${crypto.randomUUID()}@example.com`,
-        password: "correct horse battery",
-      }),
-    }),
-  );
-  expect(response.status).toBe(200);
-  const token = response.headers.get("set-auth-token");
-  expect(token).toBeTruthy();
-  return token as string;
-}
 
 type Call = { token?: string; body?: string; query?: string };
 

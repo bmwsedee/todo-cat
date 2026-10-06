@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # todo-cat
 
-A to-do list web app kept by Lissie, a cat with attitude who will be an AI agent (not built yet).
+A to-do list web app kept by Lissie, a cat with attitude and a Mastra agent you chat with on `/`.
 It is a Next.js 16 App Router app (`app/`) with two npm workspaces, `contract/` (shared zod schemas) and `cli/` (the `todo-cat` CLI, a REST client).
 
 ## Commands
@@ -21,7 +21,7 @@ Run from the repo root.
 - `npm run build` builds for production; `npm run start` serves that build.
 - `npm run lint` runs `biome check` (lint + format check, warnings fail).
 - `npm run format` applies Biome formatting.
-- `npm test` runs the Vitest unit and integration tests; `npm run test:e2e` runs the Playwright end-to-end tests.
+- `npm test` runs the Vitest unit and integration tests; `npm run test:e2e` runs the Playwright end-to-end tests; `npm run test:e2e:model` runs the chat against the real model (needs a real `OPENROUTER_API_KEY`, never in QA or CI).
 - `npm run qa` runs every check (Biome, typecheck, build, Vitest, Playwright); CI runs the same script.
 - `npm run auth:generate` regenerates the auth tables in `lib/auth-schema.ts` with Better Auth's CLI; follow it with `npm run db:generate`.
 - `npm run db:generate` writes a migration from `lib/schema.ts`, `npm run db:migrate` applies pending ones, `npm run db:reset` recreates the local database.
@@ -62,6 +62,7 @@ Index:
 - [database.md](tech-docs/database.md) — Drizzle on SQLite via libsql, migrations, and the test databases.
 - [auth.md](tech-docs/auth.md) — Better Auth (email and password, bearer, device authorization), `getUserId`, and schema generation.
 - [rest-api.md](tech-docs/rest-api.md) — the `/api/todos` endpoints, their contract schemas and status codes, and a bearer token with curl.
+- [agent.md](tech-docs/agent.md) — Lissie: the Mastra agent, its memory per user, the CopilotKit runtime over AG-UI and its authorization, and the chat on `/`.
 - [cli.md](tech-docs/cli.md) — the `todo-cat` CLI: agent-friendly output and exit codes, device-flow login, token storage, the `/device` page, the build and its end-to-end test, and the `todo-cat-cli` skill that teaches agents to use it.
 
 ## Keeping this map current
