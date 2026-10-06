@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
 
@@ -11,6 +11,11 @@ const bricolage = Bricolage_Grotesque({
 export const metadata: Metadata = {
   title: "todo-cat",
   description: "A to-do list kept by Lissie, a cat with opinions.",
+};
+
+// Both schemes are designed (globals.css), so browsers must not darken the page themselves.
+export const viewport: Viewport = {
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

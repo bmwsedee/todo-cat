@@ -52,7 +52,10 @@ The runtime's routes are an authorization surface of their own, not just a trans
 ## UI
 
 - The provider is on `/` only, in a client component, as CopilotKit requires; it uses the v2 API (`@copilotkit/react-core/v2`) and the multi-route runtime (`useSingleEndpoint={false}`).
-- `app/globals.css` maps CopilotKit's shadcn tokens to ours; its message prose, input and send button need direct overrides because its dark styles key off a `.dark` class we never set.
+- `app/globals.css` maps CopilotKit's shadcn tokens to ours and overrides what ignores them: message prose (Tailwind Typography), the copy button, the input and the send button.
+- CopilotKit's own dark mode keys off a `.dark` class, ours off `prefers-color-scheme`; an extension that adds `.dark` once gave a dark chat with light-scheme ink, so every chat rule starts with `:root body` to outrank `.dark [data-copilotkit]` and `cpk:dark:*`.
+- `color-scheme: light dark` (CSS and the viewport meta) tells forced-dark browsers that both schemes are designed.
+- Check contrast in four setups after a CopilotKit upgrade: light and dark preference, each with and without `.dark` on `<html>`.
 - The dev Inspector is off: the runtime rejects the routes it would call.
 - A failed run shows an alert under the input, cleared by the next run; her eyes half-close while she answers.
 
