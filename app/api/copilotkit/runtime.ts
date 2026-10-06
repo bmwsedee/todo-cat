@@ -9,17 +9,22 @@ import { loadLissieHistory } from "@/lib/lissie/history";
 import { mastra } from "@/lib/lissie/mastra";
 import { MastraHistoryRunner } from "@/lib/lissie/runner";
 import { lissieThreadId } from "@/lib/lissie/thread";
+import { lissieRequestContext } from "@/lib/lissie/tools";
 import { getUserId } from "@/lib/session";
 
 export const LISSIE_AGENT_ID = "lissie";
 
 const runtime = new CopilotRuntime({
-  // Per request, so Mastra memory is scoped to the caller: resource = user id.
-  agents: async ({ request }) =>
-    MastraAgent.getLocalAgents({
+  // Per request, so Mastra memory and Lissie's tools are scoped to the caller: resource =
+  // user id, and the user id in a fresh request context, which only the tools read.
+  agents: async ({ request }) => {
+    const userId = await requireUserId(request);
+    return MastraAgent.getLocalAgents({
       mastra,
-      resourceId: await requireUserId(request),
-    }),
+      resourceId: userId,
+      requestContext: lissieRequestContext(userId),
+    });
+  },
   runner: new MastraHistoryRunner(loadLissieHistory),
 });
 
