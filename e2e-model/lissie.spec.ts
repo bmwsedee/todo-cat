@@ -65,6 +65,11 @@ test("Lissie answers, remembers the conversation, and keeps it to its owner", as
   ).toBeVisible();
   await expect(page.locator(".copilotKitAssistantMessage")).toHaveCount(2);
 
+  // The browser sends only the new message, so she can only know this from Mastra memory.
+  const recalled = await say(page, "What did I ask you to remind me about?");
+  console.log(`Lissie, recalling: ${recalled}`);
+  expect(recalled).toMatch(/cat food/i);
+
   // Someone else starts with an empty thread of their own.
   const other = await (await browser.newContext({ baseURL })).newPage();
   await signUp(other, "Bob");
